@@ -50,18 +50,17 @@ dynamos/
 ## 🚀 Setup Guide
 
 ### 🔹 Backend
-cd backend
-npm install
+`cd backend`
+`npm install`
 cp .env.example .env   # Fill in MongoDB URI, Azure Translator Key, etc.
-npm run dev            # Start development server
-npm start              # Start production server
-node scheduler.js      # Run scheduled scraping (or use pm2/cron)
+`npm run dev`            # Start development server
+`node scheduler.js`      # Run scheduled scraping (or use pm2/cron)
 
 ### 🔹 React Frontend (folder1)
-cd folder1
-npm install
+`cd folder1`
+`npm install`
 cp .env.example .env   # Add Firebase / API keys
-npm start              # Start React dev server
+`npm start `            # Start React dev server
 
 ### Frontend
 1. `cd frontend`
