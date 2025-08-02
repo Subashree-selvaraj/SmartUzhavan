@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -11,7 +10,7 @@ const MarketPrices = () => {
   // API Configuration
   const API_KEY =process.env.REACT_APP_MARKET_API_KEY;
   const BACKUP_API_KEY =process.env.REACT_APP_MARKET_BACKUP_API_KEY;
-  const API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
+  const API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 
   // State management
   const [allRecords, setAllRecords] = useState([]);
@@ -94,6 +93,7 @@ const MarketPrices = () => {
       }
 
       const data = await response.json();
+      console.log(data); // <-- Add this
       const processedRecords = (data.records || []).map(apiRecord => ({
         state: apiRecord.state ? apiRecord.state.trim() : '',
         district: apiRecord.district ? apiRecord.district.trim() : '',

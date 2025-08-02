@@ -116,7 +116,7 @@
 
     try {
       const systemPrompt = "You are an expert agriculture assistant for Tamil Nadu. First, determine if the user's question is about agriculture (including farming, crops, livestock, agri-business, weather, soil, etc.). If it is, answer with a short, crisp, expert-like response. If it is NOT about agriculture, politely reply: 'Sorry, I can only answer agriculture-related questions.'";
-      const apiKey = "AIzaSyDThNYvkIr1X0cwjMKtkIO5tXRsxxVAAN4";
+      const apiKey = 'your -api-key'
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {

@@ -1,5 +1,5 @@
 // --- CONFIG ---
-const YT_API_KEY = 'AIzaSyCdRbcIruKFZa0yHZxd00YYEUEeyCeIwlw'; // <-- Replace with your API key
+const YT_API_KEY = 'your api key'; // <-- Replace with your API key
 const YT_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const DEFAULT_QUERY = 'விவசாயம் விவசாயி Tamil farming'; // Tamil farming/farmer
 const DEFAULT_TAGS = [

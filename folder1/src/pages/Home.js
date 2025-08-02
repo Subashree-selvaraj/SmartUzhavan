@@ -17,7 +17,9 @@ import {
 } from "react-icons/fa";
 import { motion, useInView } from "framer-motion";
 import { LanguageContext } from "../LanguageContext";  // Make sure this file exists and provides `lang`
+import FloatingChatbot from "../components/FloatingChatbot";
 import "./Home.css";
+
 
 // Floating icon animation component
 const FloatingIcon = ({ icon, delay = 0 }) => (
@@ -179,7 +181,7 @@ const featuresData = [
     enDesc:
       "Chat with our AI-powered agricultural assistant for instant answers to your farming questions.",
     taDesc:
-      "உங்கள் விவசாய சார் న்த கேள்விகளுக்கு உடনடி பதில்களை பெற எமது AI சகாயி உடன் உரையாடவும்.",
+      "உங்கள் விவசாய சார் న்த கேள்விகளுக்கு உடனடி பதில்களை பெற எமது AI சகாயி உடன் உரையாடவும்.",
     gradient: "linear-gradient(135deg, #607D8B, #90A4AE)",
   },
 ];
@@ -394,6 +396,8 @@ const Home = () => {
           </motion.div>
         </div>
       </footer>
+      
+      <FloatingChatbot />
     </div>
   );
 };
