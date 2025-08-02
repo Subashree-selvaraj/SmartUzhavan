@@ -1,0 +1,48 @@
+.wave-section {
+    position: absolute;
+    width: 100%;
+    height: 300px;
+    top: 50%;
+    transform: translateY(-50%);
+    overflow: hidden;
+    z-index: 1;
+}
+
+.wave-path {
+    position: absolute;
+    width: 200%;
+    height: 100%;
+    background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255, 255, 255, 0.3)" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>');
+    background-repeat: repeat-x;
+    animation: wave 15s linear infinite;
+}
+
+.wave-path-2 {
+    top: 20px;
+    opacity: 0.5;
+    animation: wave 20s linear infinite;
+}
+
+.wave-path-3 {
+    top: 40px;
+    opacity: 0.2;
+    animation: wave-reverse 18s linear infinite;
+}
+
+@keyframes wave {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes wave-reverse {
+    0% {
+        transform: translateX(-50%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}

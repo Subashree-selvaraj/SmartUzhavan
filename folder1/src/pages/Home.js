@@ -1,6 +1,7 @@
 // Home.js
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import QuoteSection from "../components/QuoteSection";
 import {
   FaLeaf,
   FaChartLine,
@@ -179,7 +180,7 @@ const featuresData = [
     enDesc:
       "Chat with our AI-powered agricultural assistant for instant answers to your farming questions.",
     taDesc:
-      "உங்கள் விவசாய சார் న்த கேள்விகளுக்கு உடনடி பதில்களை பெற எமது AI சகாயி உடன் உரையாடவும்.",
+      "உங்கள் விவசாய சார் ந்த கேள்விகளுக்கு உடனடி பதில்களை பெற எமது AI சகாயி உடன் உரையாடவும்.",
     gradient: "linear-gradient(135deg, #607D8B, #90A4AE)",
   },
 ];
@@ -210,7 +211,13 @@ const textVariants = { hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 
 const titleVariants = { hidden: { opacity: 0, scale: 0.8, rotateX: 90 }, visible: { opacity: 1, scale: 1, rotateX: 0, transition: { duration: 1.2, ease: "easeOut" } } };
 
 const Home = () => {
-  const { lang } = useContext(LanguageContext);
+  const { lang } = useContext(LanguageContext) || { lang: 'en' };
+  const currentLang = lang || 'en';
+  
+  // Early return with loading state if LANGUAGES[currentLang] is not available
+  if (!LANGUAGES[currentLang]) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="home-page">
@@ -240,32 +247,32 @@ const Home = () => {
         </motion.div>
         <motion.div initial="hidden" animate="visible" variants={containerVariants} className="hero-content">
           <motion.h1 variants={titleVariants} className="hero-heading-advanced">
-            <span className="gradient-text">{LANGUAGES[lang].name}</span>
+            <span className="gradient-text">{LANGUAGES[currentLang].name}</span>
           </motion.h1>
           <motion.p variants={textVariants} className="hero-subheading-advanced">
-            {LANGUAGES[lang].heroSubtitle}
+            {LANGUAGES[currentLang].heroSubtitle}
           </motion.p>
           <motion.div className="hero-stats" variants={containerVariants} style={{ justifyContent: "center", gap: "2rem", display: "flex", flexWrap: "wrap" }}>
             <motion.div className="stat-item" variants={textVariants} style={{ minWidth: "110px" }}>
               <div className="stat-number"><AnimatedCounter target={10000} />+</div>
-              <div className="stat-label">{LANGUAGES[lang].happyFarmers}</div>
+              <div className="stat-label">{LANGUAGES[currentLang].happyFarmers}</div>
             </motion.div>
             <motion.div className="stat-item" variants={textVariants} style={{ minWidth: "110px" }}>
               <div className="stat-number"><AnimatedCounter target={500} />+</div>
-              <div className="stat-label">{LANGUAGES[lang].cropsAnalyzed}</div>
+              <div className="stat-label">{LANGUAGES[currentLang].cropsAnalyzed}</div>
             </motion.div>
             <motion.div className="stat-item" variants={textVariants} style={{ minWidth: "110px" }}>
               <div className="stat-number"><AnimatedCounter target={95} />%</div>
-              <div className="stat-label">{LANGUAGES[lang].accuracyRate}</div>
+              <div className="stat-label">{LANGUAGES[currentLang].accuracyRate}</div>
             </motion.div>
           </motion.div>
           <motion.div className="hero-buttons" variants={textVariants} style={{ gap: "1rem", display: "flex", justifyContent: "center", flexWrap: "wrap" }}>
             <MotionLink to="/crop-disease" className="btn-primary-advanced" whileHover={{ scale: 1.05 }}>
-              <span>{LANGUAGES[lang].getStarted}</span>
+              <span>{LANGUAGES[currentLang].getStarted}</span>
               <FaArrowRight className="btn-icon" />
             </MotionLink>
             <motion.button className="btn-secondary-advanced" whileHover={{ scale: 1.05 }}>
-              {LANGUAGES[lang].watchDemo}
+              {LANGUAGES[currentLang].watchDemo}
             </motion.button>
           </motion.div>
         </motion.div>
@@ -281,7 +288,7 @@ const Home = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            {LANGUAGES[lang].ourServices}
+            {LANGUAGES[currentLang].ourServices}
           </motion.h2>
           <motion.p
             className="section-subtitle"
@@ -290,7 +297,7 @@ const Home = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            {LANGUAGES[lang].servicesSubtitle}
+            {LANGUAGES[currentLang].servicesSubtitle}
           </motion.p>
           <motion.div className="features-grid-advanced" variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}>
             {featuresData.map((feature, idx) => (
@@ -300,10 +307,10 @@ const Home = () => {
                   <motion.div className="feature-icon-advanced" whileHover={{ rotate: 360, scale: 1.2 }} transition={{ duration: 0.6 }}>
                     {feature.icon}
                   </motion.div>
-                  <h3 className="feature-title-advanced">{lang === "en" ? feature.enTitle : feature.taTitle}</h3>
-                  <p className="feature-description">{lang === "en" ? feature.enDesc : feature.taDesc}</p>
+                  <h3 className="feature-title-advanced">{currentLang === "en" ? feature.enTitle : feature.taTitle}</h3>
+                  <p className="feature-description">{currentLang === "en" ? feature.enDesc : feature.taDesc}</p>
                   <motion.div className="card-hover-overlay" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}>
-                    <span className="explore-text">{LANGUAGES[lang].exploreNow}</span>
+                    <span className="explore-text">{LANGUAGES[currentLang].exploreNow}</span>
                     <FaArrowRight />
                   </motion.div>
                 </div>
@@ -327,25 +334,25 @@ const Home = () => {
             </motion.div>
             <motion.div className="about-text-advanced" initial={{ x: 100, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }} viewport={{ once: true }} style={{ paddingLeft: 40, paddingRight: 20 }}>
               <h2 className="about-title">
-                {lang === "en" ? "About" : "பற்றி"} <span className="gradient-text" style={{ color: "#4CAF50" }}>{LANGUAGES[lang].name}</span>
+                {currentLang === "en" ? "About" : "பற்றி"} <span className="gradient-text" style={{ color: "#4CAF50" }}>{LANGUAGES[currentLang].name}</span>
               </h2>
               <p className="about-description" style={{ fontSize: "1.14rem", maxWidth: 600 }}>
-                {LANGUAGES[lang].aboutDesc1}
+                {LANGUAGES[currentLang].aboutDesc1}
                 <br />
-                {LANGUAGES[lang].aboutDesc2}
+                {LANGUAGES[currentLang].aboutDesc2}
               </p>
               <div className="about-features" style={{ marginTop: 30 }}>
                 <div className="about-feature">
                   <FaLeaf className="feature-icon-small" style={{ color: "#43a047" }} />
-                  <span>{lang === "en" ? "AI-Powered Disease Detection" : "AI-சகாயம் நோய் கண்டறிதல்"}</span>
+                  <span>{currentLang === "en" ? "AI-Powered Disease Detection" : "AI-சகாயம் நோய் கண்டறிதல்"}</span>
                 </div>
                 <div className="about-feature">
                   <FaChartLine className="feature-icon-small" style={{ color: "#82b1ff" }} />
-                  <span>{lang === "en" ? "Real-time Market Prices" : "நேரடி சந்தை விலை"}</span>
+                  <span>{currentLang === "en" ? "Real-time Market Prices" : "நேரடி சந்தை விலை"}</span>
                 </div>
                 <div className="about-feature">
                   <FaCloudSun className="feature-icon-small" style={{ color: "#FF9800" }} />
-                  <span>{lang === "en" ? "Weather Forecasting" : "வானிலை முன்னறிவு"}</span>
+                  <span>{currentLang === "en" ? "Weather Forecasting" : "வானிலை முன்னறிவு"}</span>
                 </div>
               </div>
             </motion.div>
@@ -355,41 +362,62 @@ const Home = () => {
 
       {/* FOOTER */}
       <footer className="footer-section-advanced">
-        <div className="footer-background">
-          <div className="footer-wave"></div>
-        </div>
         <div className="container">
           <motion.div className="footer-content-advanced" initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <div className="footer-quote-advanced">
-              <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ duration: 1, delay: 0.5 }}>
-                {LANGUAGES[lang].footerQuote}
-              </motion.p>
-            </div>
+            <QuoteSection />
             <motion.div className="social-icons-advanced" variants={containerVariants} initial="hidden" whileInView="visible">
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Facebook">
+              <motion.a 
+                href="https://facebook.com/smartuzhavan" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon-advanced" 
+                variants={textVariants} 
+                aria-label="Facebook"
+              >
                 <FaFacebookF />
               </motion.a>
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Twitter">
+              <motion.a 
+                href="https://twitter.com/smartuzhavan" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon-advanced" 
+                variants={textVariants} 
+                aria-label="Twitter"
+              >
                 <FaTwitter />
               </motion.a>
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Instagram">
+              <motion.a 
+                href="https://instagram.com/smartuzhavan" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon-advanced" 
+                variants={textVariants} 
+                aria-label="Instagram"
+              >
                 <FaInstagram />
               </motion.a>
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="YouTube">
+              <motion.a 
+                href="https://youtube.com/@smartuzhavan" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon-advanced" 
+                variants={textVariants} 
+                aria-label="YouTube"
+              >
                 <FaYoutube />
               </motion.a>
             </motion.div>
             <div className="footer-links-advanced">
-              <Link to="/about">{LANGUAGES[lang].aboutUs}</Link>
+              <Link to="/about">{LANGUAGES[currentLang].aboutUs}</Link>
               <span className="divider">|</span>
-              <Link to="/contact">{LANGUAGES[lang].contact}</Link>
+              <Link to="/contact">{LANGUAGES[currentLang].contact}</Link>
               <span className="divider">|</span>
-              <a href="#">{LANGUAGES[lang].privacy}</a>
+              <Link to="/privacy">{LANGUAGES[currentLang].privacy}</Link>
               <span className="divider">|</span>
-              <a href="#">{LANGUAGES[lang].terms}</a>
+              <Link to="/terms">{LANGUAGES[currentLang].terms}</Link>
             </div>
             <div className="copyright-advanced">
-              <p>{LANGUAGES[lang].copyright}</p>
+              <p>{LANGUAGES[currentLang].copyright}</p>
             </div>
           </motion.div>
         </div>

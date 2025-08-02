@@ -1,0 +1,28 @@
+.stat-item {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.btn-secondary-advanced {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.about-feature {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.footer-quote-advanced {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.social-icon-advanced {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@media (max-width: 480px) {
+  .feature-card-advanced {
+    min-height: 0;
+  }
+}

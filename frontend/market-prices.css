@@ -8,11 +8,11 @@
   --warning: #f57c00;
   --success: #388e3c;
   --bg: #f8faf8;
-  --text: #1b1b1b;
+  --text: #ffffff;  /* Changed to white */
+  --text-dark: #1b1b1b;
   --card-bg: #ffffff;
   --card-shadow: 0 4px 12px rgba(0,0,0,0.1);
   --border-radius: 12px;
-
 }
 
 * {
@@ -29,25 +29,39 @@ body {
   min-height: 100vh;
 }
 
+/* Ensure dashboard text is white */
+.page-header h1,
+.page-header p,
+.page-header span {
+  color: #ffffff !important;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
 /* Page Header */
 .page-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  color: white;
   padding: 2rem 1rem;
   text-align: center;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   margin-top: 80px; /* Account for fixed navbar */
+  position: relative;
 }
 
 .page-header h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
 }
 
 .page-header p {
   font-size: 1.1rem;
-  opacity: 0.9;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  font-weight: 500;
+  letter-spacing: 0.3px;
   font-weight: 300;
 }
 

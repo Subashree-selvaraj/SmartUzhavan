@@ -1,14 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './AgriChatbot.css';
+import backgroundImage from '../assets/paddy-field-bg.jpg';
 
 const AgriChatbot = () => {
+  // Apply background image as a style
+  const backgroundStyle = {
+    backgroundImage: `url(${backgroundImage})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed'
+  };
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('auto');
   const [isRecording, setIsRecording] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  // const [isVisible, setIsVisible] = useState(false); // Temporarily removed unused state
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentSpeakingId, setCurrentSpeakingId] = useState(null);
   const [currentAudio, setCurrentAudio] = useState(null);
@@ -18,7 +26,7 @@ const AgriChatbot = () => {
   const recognitionRef = useRef(null);
 
   const API_BASE_URL = 'http://localhost:5000/api';
-  const SESSION_ID = 'chatbot_session_' + Date.now();
+  // const SESSION_ID = 'chatbot_session_' + Date.now(); // Temporarily removed unused constant
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,6 +41,9 @@ const AgriChatbot = () => {
     if (messages.length === 0) {
       addWelcomeMessage();
     }
+  }, [messages.length]); // Added messages.length as dependency
+
+  useEffect(() => {
 
     // Load speech synthesis voices
     if ('speechSynthesis' in window) {
@@ -66,10 +77,11 @@ How can I assist you today?`,
     setMessages([welcomeMessage]);
   };
 
-  const detectLanguage = (text) => {
-    const tamilRegex = /[\u0B80-\u0BFF]/;
-    return tamilRegex.test(text) ? 'ta' : 'en';
-  };
+  // Language detection utility, will be used in future implementation
+  // const detectLanguage = (text) => {
+  //   const tamilRegex = /[\u0B80-\u0BFF]/;
+  //   return tamilRegex.test(text) ? 'ta' : 'en';
+  // };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() && !selectedImage) return;
@@ -454,7 +466,7 @@ How can I assist you today?`,
   };
 
   return (
-    <div className="chatbot-page">
+    <div className="chatbot-page" style={backgroundStyle}>
       <div className="chatbot-header">
         <div className="header-left">
           <div className="bot-avatar">

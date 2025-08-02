@@ -150,6 +150,7 @@
   padding: 1.5rem;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   min-width: 120px;
@@ -234,6 +235,7 @@
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
 }
@@ -389,9 +391,23 @@
   color: inherit;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  perspective: 1000px;
+  transition: all 0.5s ease;
   transform-style: preserve-3d;
+  animation: cardFloat 3s ease-in-out infinite;
+}
+
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.feature-card-advanced:hover {
+  transform: translateY(-15px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(76, 175, 80, 0.2);
 }
 
 .card-background {
@@ -432,7 +448,23 @@
   color: white;
   margin-bottom: 1.5rem;
   box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(76, 175, 80, 0.4);
+  }
+}
+
+.feature-card-advanced:hover .feature-icon-advanced {
+  transform: rotate(360deg) scale(1.1);
+  background: linear-gradient(135deg, #2E7D32, #4CAF50);
 }
 
 .feature-title-advanced {
@@ -522,6 +554,7 @@
   padding: 1rem;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
@@ -612,14 +645,7 @@
 }
 
 .footer-wave {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z' fill='%23f8f9fa'%3E%3C/path%3E%3C/svg%3E") no-repeat;
-  background-size: cover;
-  transform: scaleX(-1);
+  display: none;
 }
 
 .footer-content-advanced {
@@ -634,6 +660,7 @@
   padding: 2rem;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -665,6 +692,7 @@
   text-decoration: none;
   transition: all 0.3s ease;
   border: 2px solid transparent;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -762,7 +790,7 @@
   }
 
   .feature-card-advanced {
-    min-height: auto;
+    min-height: 0;
   }
 
   .card-content {
