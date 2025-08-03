@@ -1,6 +1,10 @@
-# SmartUzhavan (dynamos)
+#🌱 SmartUzhavan (dynamos)
+A modern web platform for Tamil Nadu farmers providing:
+✅ Real-time weather updates
+✅ Market prices for crops
+✅ Government schemes & news
+✅ PWA with offline support
 
-A modern web platform for Tamil Nadu farmers, providing real-time weather, market prices, government schemes, and more.
 
 ## Project Structure
 
@@ -16,6 +20,13 @@ dynamos/
 │   ├── routes/
 │   ├── utils/
 │   └── ...
+│
+├── folder1/ # React frontend (modern UI for farmers)
+│ ├── src/
+│ ├── public/
+│ ├── package.json
+│ ├── .env
+│ └── ...
 │
 ├── frontend/        # Static HTML/CSS/JS, PWA, service worker
 │   ├── index.html
@@ -33,14 +44,23 @@ dynamos/
 ├── README.md
 ```
 
-## Setup
 
-### Backend
-1. `cd backend`
-2. `npm install`
-3. Copy `.env.example` to `.env` and fill in your secrets (MongoDB URI, Azure Translator, etc.)
-4. Start server: `npm start` or `npm run dev`
-5. To enable scheduled scraping: `node scheduler.js` (or use pm2/Render cron job)
+---
+
+## 🚀 Setup Guide
+
+### 🔹 Backend
+`cd backend`
+`npm install`
+cp .env.example .env   # Fill in MongoDB URI, Azure Translator Key, etc.
+`npm run dev`            # Start development server
+`node scheduler.js`      # Run scheduled scraping (or use pm2/cron)
+
+### 🔹 React Frontend (folder1)
+`cd folder1`
+`npm install`
+cp .env.example .env   # Add Firebase / API keys
+`npm start `            # Start React dev server
 
 ### Frontend
 1. `cd frontend`
@@ -57,4 +77,5 @@ dynamos/
 - Scraping is done with Puppeteer and Azure Translator at scrape time
 
 ---
+
 For more details, see the `README.md` in each subfolder. 

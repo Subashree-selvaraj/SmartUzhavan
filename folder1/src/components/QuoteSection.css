@@ -1,0 +1,47 @@
+.quote-section {
+  position: relative;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quote-content {
+  position: relative;
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: 1.8rem;
+  font-style: italic;
+  color: #1B5E20;
+  padding: 3rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.quote-content:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.quote-author {
+  display: block;
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .quote-content {
+    font-size: 1.4rem;
+    padding: 2rem;
+  }
+  
+  .quote-author {
+    font-size: 1rem;
+  }
+}

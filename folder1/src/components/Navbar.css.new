@@ -4,75 +4,14 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 70px;
+    height: 60px;
     z-index: 1000;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     border-bottom: 2px solid #4CAF50;
     display: flex;
     align-items: center;
     box-sizing: border-box;
-    padding: 0 4rem;
-}
-
-/* Profile button styles */
-.profile-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: white;
-    font-size: 1.1rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    max-height: 40px;
-}
-
-.profile-button img,
-.user-avatar,
-.dropdown-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-    border: 2px solid #4CAF50;
-}
-
-.user-profile-link {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: white;
-}
-
-.user-profile-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.dropdown-avatar {
-    width: 48px;
-    height: 48px;
-}
-
-.profile-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-}
-
-.profile-button:active {
-    transform: scale(0.98);
-}
-
-.profile-button img:active {
-    transform: scale(1);
+    padding: 0 2rem;
 }
 
 .navbar-container {
@@ -81,25 +20,22 @@
     width: 100%;
     margin: 0;
     padding: 0;
-    justify-content: flex-start;  /* Changed to flex-start for better alignment */
-    gap: 4rem;  /* Added gap between items */
+    justify-content: space-between;
 }
 
 .nav-right {
     display: flex;
     align-items: center;
     margin-left: auto;
-    gap: 3rem;  /* Increased gap */
+    gap: 2rem;
 }
 
 .logo {
-    margin-right: 0;  /* Removed auto margin */
-    display: flex;
-    align-items: center;
+    margin-right: auto;
 }
 
 .logo img {
-    height: 50px;  /* Slightly increased logo size */
+    height: 45px;
     width: auto;
     display: block;
     transition: transform 0.3s ease;
@@ -112,7 +48,6 @@
 .navbar-menu {
     display: flex;
     align-items: center;
-    gap: 3rem;  /* Added consistent gap */
     gap: 2rem;
     list-style: none;
     margin: 0;
@@ -127,9 +62,9 @@
 
 .menu-item {
     color: white;
-    font-weight: 600;
-    font-size: 1.1rem;
-    padding: 0.7rem 1.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
     background: none;
     border: none;
     cursor: pointer;
@@ -142,41 +77,34 @@
     user-select: none;
     text-decoration: none;
     border-radius: 20px;
-    letter-spacing: 0.5px;
 }
 
 .menu-item:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.15);
+    color: #C8E6C9;
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .language-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
     color: white;
-    font-weight: 600;
-    font-size: 1.1rem;
-    padding: 0.7rem 1.5rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.3s ease;
-    -webkit-user-select: none;
-    user-select: none;
-    text-decoration: none;
-    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
 }
 
 .language-toggle:hover {
-    color: #2e7d32;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
     transform: translateY(-2px);
-    background: none;
 }
 
 .language-toggle:active {
-    transform: scale(0.98);
+    transform: scale(0.95);
 }
 
 /* Account section styles */
@@ -212,17 +140,10 @@
 }
 
 .user-avatar {
-    width: 32px !important;
-    height: 32px !important;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
-    pointer-events: none;
-    transform: scale(1) !important;
-}
-
-.user-profile-link:active .user-avatar {
-    transform: scale(1) !important;
 }
 
 .user-name {

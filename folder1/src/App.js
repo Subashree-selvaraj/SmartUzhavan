@@ -17,7 +17,13 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import './App.css';
 
+// Debug imports
+console.log('App.js loaded');
+console.log('YoutubeRefs imported:', YoutubeRefs ? 'Yes' : 'No');
+
 function App() {
+  console.log('App component rendering');
+  
   return (
     <LanguageProvider>
       <AuthProvider>

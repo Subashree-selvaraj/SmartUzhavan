@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Constants (replace with your API key)
-const YT_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY;
+// Constants
+const YT_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY || 'AIzaSyCdRbcIruKFZa0yHZxd00YYEUEeyCeIwlw';
 const YT_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
+
+// Debug API key
+console.log('YouTube API Key:', YT_API_KEY);
 
 const DEFAULT_QUERY_TA = 'விவசாயம் விவசாயி Tamil farming';
 const DEFAULT_QUERY_EN = 'farming agriculture';

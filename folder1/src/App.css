@@ -10,15 +10,16 @@
 body {
   font-family: 'Poppins', sans-serif;
   line-height: 1.6;
-  color: #333;
-  background-color: #f8f9fa;
+  color: #2E7D32;
+  background-color: #FFFFFF;
 }
 
 .App {
   min-height: 100vh;
 }
 
-/* Navbar styles */
+/* Navbar styles - commented out to avoid conflicts with Navbar.css */
+/* 
 .navbar {
   background: linear-gradient(135deg, #81C784, #A5D6A7);
   padding: 0.8rem 0;
@@ -29,7 +30,10 @@ body {
   box-shadow: 0 2px 15px rgba(129, 199, 132, 0.2);
   backdrop-filter: blur(10px);
 }
+*/
 
+/* Navbar container styles - commented out to avoid conflicts with Navbar.css */
+/*
 .navbar-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -85,7 +89,10 @@ body {
   top: 100%;
   right: 0;
 }
+*/
 
+/* More navbar styles - commented out to avoid conflicts with Navbar.css */
+/*
 .language-dropdown:hover .dropdown-content {
   display: block;
 }
@@ -137,6 +144,7 @@ body {
   visibility: visible;
   opacity: 1;
 }
+*/
 
 /* Cultural Icon */
 .cultural-icon {
