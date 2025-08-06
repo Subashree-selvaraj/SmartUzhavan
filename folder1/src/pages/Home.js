@@ -1,7 +1,6 @@
 // Home.js
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import QuoteSection from "../components/QuoteSection";
 import {
   FaLeaf,
   FaChartLine,
@@ -17,10 +16,8 @@ import {
   FaArrowRight,
 } from "react-icons/fa";
 import { motion, useInView } from "framer-motion";
-import { LanguageContext } from "../LanguageContext";  // Make sure this file exists and provides `lang`
-import FloatingChatbot from "../components/FloatingChatbot";
+import { LanguageContext } from "../LanguageContext"; // Make sure this file exists and provides `lang`
 import "./Home.css";
-
 
 // Floating icon animation component
 const FloatingIcon = ({ icon, delay = 0 }) => (
@@ -62,11 +59,11 @@ const AnimatedCounter = ({ target, duration = 2 }) => {
 
 const MotionLink = motion(Link);
 
-// Language strings -- keep your translations here
 const LANGUAGES = {
   en: {
     name: "SmartUzhavan",
-    heroSubtitle: "Empowering Tamil Nadu Farmers with Modern Technology and Traditional Wisdom",
+    heroSubtitle:
+      "Empowering Tamil Nadu Farmers with Modern Technology and Traditional Wisdom",
     getStarted: "Get Started",
     watchDemo: "Watch Demo",
     ourServices: "Our Services",
@@ -117,7 +114,6 @@ const LANGUAGES = {
   },
 };
 
-// Bilingual feature cards
 const featuresData = [
   {
     to: "/crop-disease",
@@ -187,7 +183,6 @@ const featuresData = [
   },
 ];
 
-// Animation variants for framer-motion
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 } },
@@ -209,17 +204,17 @@ const cardVariants = {
     transition: { duration: 0.3 },
   },
 };
-const textVariants = { hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } } };
-const titleVariants = { hidden: { opacity: 0, scale: 0.8, rotateX: 90 }, visible: { opacity: 1, scale: 1, rotateX: 0, transition: { duration: 1.2, ease: "easeOut" } } };
+const textVariants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
+};
+const titleVariants = {
+  hidden: { opacity: 0, scale: 0.8, rotateX: 90 },
+  visible: { opacity: 1, scale: 1, rotateX: 0, transition: { duration: 1.2, ease: "easeOut" } },
+};
 
 const Home = () => {
-  const { lang } = useContext(LanguageContext) || { lang: 'en' };
-  const currentLang = lang || 'en';
-  
-  // Early return with loading state if LANGUAGES[currentLang] is not available
-  if (!LANGUAGES[currentLang]) {
-    return <div>Loading...</div>;
-  }
+  const { lang } = useContext(LanguageContext);
 
   return (
     <div className="home-page">
@@ -249,32 +244,42 @@ const Home = () => {
         </motion.div>
         <motion.div initial="hidden" animate="visible" variants={containerVariants} className="hero-content">
           <motion.h1 variants={titleVariants} className="hero-heading-advanced">
-            <span className="gradient-text">{LANGUAGES[currentLang].name}</span>
+            <span className="gradient-text">{LANGUAGES[lang].name}</span>
           </motion.h1>
           <motion.p variants={textVariants} className="hero-subheading-advanced">
-            {LANGUAGES[currentLang].heroSubtitle}
+            {LANGUAGES[lang].heroSubtitle}
           </motion.p>
-          <motion.div className="hero-stats" variants={containerVariants} style={{ justifyContent: "center", gap: "2rem", display: "flex", flexWrap: "wrap" }}>
+          <motion.div
+            className="hero-stats"
+            variants={containerVariants}
+            style={{ justifyContent: "center", gap: "2rem", display: "flex", flexWrap: "wrap" }}
+          >
             <motion.div className="stat-item" variants={textVariants} style={{ minWidth: "110px" }}>
-              <div className="stat-number"><AnimatedCounter target={10000} />+</div>
-              <div className="stat-label">{LANGUAGES[currentLang].happyFarmers}</div>
+              <div className="stat-number">
+                <AnimatedCounter target={10000} />+
+              </div>
+              <div className="stat-label">{LANGUAGES[lang].happyFarmers}</div>
             </motion.div>
             <motion.div className="stat-item" variants={textVariants} style={{ minWidth: "110px" }}>
-              <div className="stat-number"><AnimatedCounter target={500} />+</div>
-              <div className="stat-label">{LANGUAGES[currentLang].cropsAnalyzed}</div>
+              <div className="stat-number">
+                <AnimatedCounter target={500} />+
+              </div>
+              <div className="stat-label">{LANGUAGES[lang].cropsAnalyzed}</div>
             </motion.div>
             <motion.div className="stat-item" variants={textVariants} style={{ minWidth: "110px" }}>
-              <div className="stat-number"><AnimatedCounter target={95} />%</div>
-              <div className="stat-label">{LANGUAGES[currentLang].accuracyRate}</div>
+              <div className="stat-number">
+                <AnimatedCounter target={95} />%
+              </div>
+              <div className="stat-label">{LANGUAGES[lang].accuracyRate}</div>
             </motion.div>
           </motion.div>
           <motion.div className="hero-buttons" variants={textVariants} style={{ gap: "1rem", display: "flex", justifyContent: "center", flexWrap: "wrap" }}>
             <MotionLink to="/crop-disease" className="btn-primary-advanced" whileHover={{ scale: 1.05 }}>
-              <span>{LANGUAGES[currentLang].getStarted}</span>
+              <span>{LANGUAGES[lang].getStarted}</span>
               <FaArrowRight className="btn-icon" />
             </MotionLink>
             <motion.button className="btn-secondary-advanced" whileHover={{ scale: 1.05 }}>
-              {LANGUAGES[currentLang].watchDemo}
+              {LANGUAGES[lang].watchDemo}
             </motion.button>
           </motion.div>
         </motion.div>
@@ -290,7 +295,7 @@ const Home = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            {LANGUAGES[currentLang].ourServices}
+            {LANGUAGES[lang].ourServices}
           </motion.h2>
           <motion.p
             className="section-subtitle"
@@ -299,20 +304,38 @@ const Home = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            {LANGUAGES[currentLang].servicesSubtitle}
+            {LANGUAGES[lang].servicesSubtitle}
           </motion.p>
-          <motion.div className="features-grid-advanced" variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+          <motion.div
+            className="features-grid-advanced"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
             {featuresData.map((feature, idx) => (
-              <MotionLink key={idx} to={feature.to} className="feature-card-advanced" variants={cardVariants} whileHover="hover" custom={idx}>
+              <MotionLink
+                key={idx}
+                to={feature.to}
+                className="feature-card-advanced"
+                variants={cardVariants}
+                whileHover="hover"
+                custom={idx}
+              >
                 <div className="card-background" style={{ background: feature.gradient }} />
                 <div className="card-content">
-                  <motion.div className="feature-icon-advanced" whileHover={{ rotate: 360, scale: 1.2 }} transition={{ duration: 0.6 }}>
+                  <motion.div
+                    className="feature-icon-advanced"
+                    whileHover={{ rotate: 360, scale: 1.2 }}
+                    whileTap={{ rotate: 360, scale: 1.2 }}
+                    transition={{ duration: 0.6 }}
+                  >
                     {feature.icon}
                   </motion.div>
-                  <h3 className="feature-title-advanced">{currentLang === "en" ? feature.enTitle : feature.taTitle}</h3>
-                  <p className="feature-description">{currentLang === "en" ? feature.enDesc : feature.taDesc}</p>
+                  <h3 className="feature-title-advanced">{lang === "en" ? feature.enTitle : feature.taTitle}</h3>
+                  <p className="feature-description">{lang === "en" ? feature.enDesc : feature.taDesc}</p>
                   <motion.div className="card-hover-overlay" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}>
-                    <span className="explore-text">{LANGUAGES[currentLang].exploreNow}</span>
+                    <span className="explore-text">{LANGUAGES[lang].exploreNow}</span>
                     <FaArrowRight />
                   </motion.div>
                 </div>
@@ -328,33 +351,55 @@ const Home = () => {
         style={{ background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 70%, #E8F5E9 100%)", color: "#204020" }}
       >
         <div className="container">
-          <motion.div className="about-content-advanced" initial={{ opacity: 0, y: 60 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} viewport={{ once: true }}>
-            <motion.div className="about-image-advanced" initial={{ x: -100, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} viewport={{ once: true }}>
+          <motion.div
+            className="about-content-advanced"
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <motion.div
+              className="about-image-advanced"
+              initial={{ x: -100, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
               <div className="image-container" style={{ boxShadow: "0 14px 48px rgba(67,160,71,0.07)" }}>
                 <img src="/about-image.jpg" alt="Tamil Nadu Farmers" />
               </div>
             </motion.div>
-            <motion.div className="about-text-advanced" initial={{ x: 100, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }} viewport={{ once: true }} style={{ paddingLeft: 40, paddingRight: 20 }}>
+            <motion.div
+              className="about-text-advanced"
+              initial={{ x: 100, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              viewport={{ once: true }}
+              style={{ paddingLeft: 40, paddingRight: 20 }}
+            >
               <h2 className="about-title">
-                {currentLang === "en" ? "About" : "பற்றி"} <span className="gradient-text" style={{ color: "#4CAF50" }}>{LANGUAGES[currentLang].name}</span>
+                {lang === "en" ? "About" : "பற்றி"}{" "}
+                <span className="gradient-text" style={{ color: "#4CAF50" }}>
+                  {LANGUAGES[lang].name}
+                </span>
               </h2>
               <p className="about-description" style={{ fontSize: "1.14rem", maxWidth: 600 }}>
-                {LANGUAGES[currentLang].aboutDesc1}
+                {LANGUAGES[lang].aboutDesc1}
                 <br />
-                {LANGUAGES[currentLang].aboutDesc2}
+                {LANGUAGES[lang].aboutDesc2}
               </p>
               <div className="about-features" style={{ marginTop: 30 }}>
                 <div className="about-feature">
                   <FaLeaf className="feature-icon-small" style={{ color: "#43a047" }} />
-                  <span>{currentLang === "en" ? "AI-Powered Disease Detection" : "AI-சகாயம் நோய் கண்டறிதல்"}</span>
+                  <span>{lang === "en" ? "AI-Powered Disease Detection" : "AI-சகாயம் நோய் கண்டறிதல்"}</span>
                 </div>
                 <div className="about-feature">
                   <FaChartLine className="feature-icon-small" style={{ color: "#82b1ff" }} />
-                  <span>{currentLang === "en" ? "Real-time Market Prices" : "நேரடி சந்தை விலை"}</span>
+                  <span>{lang === "en" ? "Real-time Market Prices" : "நேரடி சந்தை விலை"}</span>
                 </div>
                 <div className="about-feature">
                   <FaCloudSun className="feature-icon-small" style={{ color: "#FF9800" }} />
-                  <span>{currentLang === "en" ? "Weather Forecasting" : "வானிலை முன்னறிவு"}</span>
+                  <span>{lang === "en" ? "Weather Forecasting" : "வானிலை முன்னறிவு"}</span>
                 </div>
               </div>
             </motion.div>
@@ -364,68 +409,50 @@ const Home = () => {
 
       {/* FOOTER */}
       <footer className="footer-section-advanced">
+        <div className="footer-background">
+          <div className="footer-wave"></div>
+        </div>
         <div className="container">
-          <motion.div className="footer-content-advanced" initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <QuoteSection />
+          <motion.div
+            className="footer-content-advanced"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="footer-quote-advanced">
+              <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ duration: 1, delay: 0.5 }}>
+                {LANGUAGES[lang].footerQuote}
+              </motion.p>
+            </div>
             <motion.div className="social-icons-advanced" variants={containerVariants} initial="hidden" whileInView="visible">
-              <motion.a 
-                href="https://facebook.com/smartuzhavan" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="social-icon-advanced" 
-                variants={textVariants} 
-                aria-label="Facebook"
-              >
+              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Facebook">
                 <FaFacebookF />
               </motion.a>
-              <motion.a 
-                href="https://twitter.com/smartuzhavan" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="social-icon-advanced" 
-                variants={textVariants} 
-                aria-label="Twitter"
-              >
+              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Twitter">
                 <FaTwitter />
               </motion.a>
-              <motion.a 
-                href="https://instagram.com/smartuzhavan" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="social-icon-advanced" 
-                variants={textVariants} 
-                aria-label="Instagram"
-              >
+              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Instagram">
                 <FaInstagram />
               </motion.a>
-              <motion.a 
-                href="https://youtube.com/@smartuzhavan" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="social-icon-advanced" 
-                variants={textVariants} 
-                aria-label="YouTube"
-              >
+              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="YouTube">
                 <FaYoutube />
               </motion.a>
             </motion.div>
             <div className="footer-links-advanced">
-              <Link to="/about">{LANGUAGES[currentLang].aboutUs}</Link>
+              <Link to="/about">{LANGUAGES[lang].aboutUs}</Link>
               <span className="divider">|</span>
-              <Link to="/contact">{LANGUAGES[currentLang].contact}</Link>
+              <Link to="/contact">{LANGUAGES[lang].contact}</Link>
               <span className="divider">|</span>
-              <Link to="/privacy">{LANGUAGES[currentLang].privacy}</Link>
+              <a href="#">{LANGUAGES[lang].privacy}</a>
               <span className="divider">|</span>
-              <Link to="/terms">{LANGUAGES[currentLang].terms}</Link>
+              <a href="#">{LANGUAGES[lang].terms}</a>
             </div>
             <div className="copyright-advanced">
-              <p>{LANGUAGES[currentLang].copyright}</p>
+              <p>{LANGUAGES[lang].copyright}</p>
             </div>
           </motion.div>
         </div>
       </footer>
-      
-      <FloatingChatbot />
     </div>
   );
 };
