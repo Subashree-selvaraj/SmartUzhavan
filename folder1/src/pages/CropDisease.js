@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import './CropDisease.css'; // Your CSS file path
-import { FaLeaf, FaPaperclip } from 'react-icons/fa';
+import { FaPaperclip } from 'react-icons/fa';
+import { diseaseApi } from '../api/diseaseApi';
 
 const translations = {
   en: {
@@ -34,6 +35,11 @@ const CropDiseaseDetectionChat = () => {
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const [selectedImage, setSelectedImage] = useState(null); // reserved for future enhancements
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [detectionData, setDetectionData] = useState(null);
+
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -76,6 +82,7 @@ const CropDiseaseDetectionChat = () => {
     const file = e.target.files[0];
     if (!file) return;
     setFileName(file.name);
+    setSelectedImage(file); // Set selected image for sharing
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -147,6 +154,7 @@ const CropDiseaseDetectionChat = () => {
       }
 
       const data = await response.json();
+      setDetectionData(data); // Store detection data for sharing
       displayPrediction(data);
     } catch (error) {
       appendMessage('bot', <p>{error.message}</p>);
@@ -212,6 +220,52 @@ const CropDiseaseDetectionChat = () => {
     );
 
     appendMessage('bot', resultContent);
+    // Show share button after displaying prediction
+    setShowShareModal(true);
+  };
+
+  const shareWithCommunity = async () => {
+    setShareLoading(true);
+    try {
+      // Attempt to get location automatically
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        await diseaseApi.postReport({
+          farmerName: detectionData.farmerName || "Anonymous",
+          cropName: detectionData.crop,
+          diseaseName: detectionData.disease,
+          severity: detectionData.severity || "moderate",
+          imageUrl: detectionData.imageUrl,
+          latitude,
+          longitude,
+          reportedBy: "CropDisease Detection"
+        });
+        appendMessage('bot', 'Detection shared successfully with the community!');
+      }, async (error) => {
+        // If geolocation fails, share without location (default coordinates)
+        await diseaseApi.postReport({
+          farmerName: detectionData.farmerName || "Anonymous",
+          cropName: detectionData.crop,
+          diseaseName: detectionData.disease,
+          severity: detectionData.severity || "moderate",
+          imageUrl: detectionData.imageUrl,
+          latitude: 11.0168, // Default to Tamil Nadu center
+          longitude: 76.9558,
+          reportedBy: "CropDisease Detection"
+        });
+        appendMessage('bot', 'Detection shared successfully (location not available).');
+      });
+      setShowShareModal(false);
+    } catch (err) {
+      appendMessage('bot', 'Failed to share detection. Please try again.');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const declineSharing = () => {
+    setShowShareModal(false);
+    appendMessage('bot', 'Sharing declined.');
   };
 
   return (
@@ -367,7 +421,40 @@ const CropDiseaseDetectionChat = () => {
           </p>
         </div>
       </main>
-    </div>
+
+        {/* Share Modal */}
+        {showShareModal && (
+          <div className="share-modal-overlay">
+            <div className="share-modal">
+              <h3>Share with Community</h3>
+              <p>Do you want to share this detection with your farming community? (Location will be auto-detected)</p>
+              <div className="share-modal-buttons">
+                <button
+                  onClick={shareWithCommunity}
+                  disabled={shareLoading}
+                  className="btn-share"
+                >
+                  {shareLoading ? 'Sharing...' : 'Yes, Share'}
+                </button>
+                <button
+                  onClick={declineSharing}
+                  className="btn-decline"
+                >
+                  No, Thanks
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Disease Map Button */}
+        <div className="disease-map-section">
+          <a href="/disease-map" className="btn-disease-map">
+            <i className="fas fa-map-marked-alt"></i>
+            View Disease Map
+          </a>
+        </div>
+      </div>
   );
 };
 

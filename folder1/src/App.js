@@ -15,6 +15,7 @@ import Schemes from './pages/Schemes';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
+import DiseaseMap from './pages/DiseaseMap';
 import './App.css';
 
 // Debug imports
@@ -23,7 +24,7 @@ console.log('YoutubeRefs imported:', YoutubeRefs ? 'Yes' : 'No');
 
 function App() {
   console.log('App component rendering');
-  
+
   return (
     <LanguageProvider>
       <AuthProvider>
@@ -52,6 +53,7 @@ function App() {
               <Route path="/chatbot" element={<AgriChatbot />} />
               <Route path="/ai-assistant" element={<AgriChatbot />} />
 
+              <Route path="/disease-map" element={<DiseaseMap />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/profile" element={<Profile />} />

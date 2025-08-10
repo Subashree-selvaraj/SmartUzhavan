@@ -7,14 +7,33 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const http = require('http');
+const socketIo = require('socket.io');
 
 const authRoutes = require('./routes/auth');
 const schemesRoutes = require('./routes/schemes');
 const predictRoutes = require('./routes/predict');
+const diseaseReportsRoutes = require('./routes/diseaseReports');
 
 const admin = require('firebase-admin');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://0.0.0.0:3000',
+      'http://localhost:3001'
+    ],
+    methods: ['GET', 'POST']
+  }
+});
+
+// Attach io to app for use in routes
+app.set('io', io);
+
 const PORT = process.env.PORT || 5000;
 
 // MongoDB Connection
@@ -181,6 +200,7 @@ function generateDistrictData(crop) {
 app.use('/api/auth', authRoutes);
 app.use('/api/schemes', schemesRoutes);
 app.use('/api', predictRoutes);
+app.use('/api/diseaseReports', diseaseReportsRoutes);
 
 // Serve frontend root
 app.get('/', (req, res) => {
@@ -353,7 +373,16 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
