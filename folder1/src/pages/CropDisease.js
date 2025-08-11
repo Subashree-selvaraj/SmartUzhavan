@@ -5,6 +5,8 @@ import { FaPaperclip } from 'react-icons/fa';
 import { diseaseApi } from '../api/diseaseApi';
 import { useAuth } from '../context/AuthContext';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+
 const translations = {
   en: {
     welcome: 'Welcome! Please upload a photo of the affected crop leaf to get a diagnosis.',
@@ -142,7 +144,7 @@ const CropDiseaseDetectionChat = () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/predict?lang=${currentLang}`, {
+      const response = await fetch(`${API_BASE}/predict?lang=${currentLang}`, {
         method: 'POST',
         body: formData,
       });
