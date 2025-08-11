@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const OutbreakReport = require('../models/OutbreakReport');
+const OutbreakReport = require('../models/outbreakReport');
 
 // POST /api/outbreak/report
 router.post('/report', async (req, res) => {

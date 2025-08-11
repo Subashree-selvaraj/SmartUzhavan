@@ -7,6 +7,11 @@ import io from 'socket.io-client';
 import { diseaseApi } from '../api/diseaseApi';
 import './DiseaseMap.css';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL
+  || process.env.REACT_APP_BACKEND_URL
+  || API_BASE.replace(/\/?api\/?$/, '');
+
 // Custom marker icons for different severity levels
 const createPinIcon = (severity) => {
   const color = severity === 'severe' ? '#e53935' : severity === 'moderate' ? '#fb8c00' : '#43a047';
@@ -24,13 +29,17 @@ const MapController = ({ reports, selectedRegion }) => {
 
   useEffect(() => {
     if (reports.length > 0) {
-      const bounds = L.latLngBounds(
-        reports.map(report => [
-          report.location.coordinates[1], // lat
-          report.location.coordinates[0]  // lng
-        ])
-      );
-      map.fitBounds(bounds, { padding: [20, 20] });
+      const coords = reports
+        .map((report) => {
+          const lng = report?.location?.coordinates?.[0];
+          const lat = report?.location?.coordinates?.[1];
+          return (typeof lat === 'number' && typeof lng === 'number') ? [lat, lng] : null;
+        })
+        .filter(Boolean);
+      if (coords.length > 0) {
+        const bounds = L.latLngBounds(coords);
+        map.fitBounds(bounds, { padding: [20, 20] });
+      }
     }
   }, [reports, map, selectedRegion]);
 
@@ -57,23 +66,25 @@ const DiseaseMap = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-    const newSocket = io(SOCKET_URL);
-
-    newSocket.on('connect', () => {
-      console.log('Connected to disease map socket');
-    });
-
-    newSocket.on('newReport', (newReport) => {
-      console.log('Received new disease report:', newReport);
-      setReports(prev => [newReport, ...prev]);
-    });
-
-    socketRef.current = newSocket;
-
-    return () => {
-      newSocket.disconnect();
-    };
+    try {
+      const newSocket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+      newSocket.on('connect', () => {
+        // eslint-disable-next-line no-console
+        console.log('Connected to disease map socket');
+      });
+      newSocket.on('newReport', (newReport) => {
+        // eslint-disable-next-line no-console
+        console.log('Received new disease report:', newReport);
+        setReports((prev) => [newReport, ...prev]);
+      });
+      socketRef.current = newSocket;
+      return () => {
+        newSocket.disconnect();
+      };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Socket init failed:', err);
+    }
   }, []);
 
   // Load initial data
@@ -88,18 +99,17 @@ const DiseaseMap = () => {
       // Get reports from last 90 days for performance
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 90);
-      
       const response = await diseaseApi.fetchReports({
         startDate: startDate.toISOString(),
         limit: 1000
       });
-
       setReports(response.data || []);
       setAvailableFilters({
         crops: response.filters?.crops || [],
         diseases: response.filters?.diseases || []
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error loading disease reports:', error);
     } finally {
       setLoading(false);
@@ -108,11 +118,12 @@ const DiseaseMap = () => {
 
   const loadHotspots = async () => {
     try {
-      const base = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api');
+      const base = API_BASE;
       const resp = await fetch(`${base}/diseaseReports/hotspots?days=14&cellSize=0.5&minCount=3`);
       const data = await resp.json();
       if (data.success) setHotspots(data.data);
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.warn('Failed to load hotspots');
     }
   };
@@ -120,30 +131,26 @@ const DiseaseMap = () => {
   const applyFilters = useCallback(() => {
     let filtered = [...reports];
 
-    // Apply crop filter
     if (filters.cropName) {
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         report.cropName.toLowerCase().includes(filters.cropName.toLowerCase())
       );
     }
 
-    // Apply disease filter
     if (filters.diseaseName) {
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         report.diseaseName.toLowerCase().includes(filters.diseaseName.toLowerCase())
       );
     }
 
-    // Apply severity filter
     if (filters.severity) {
       filtered = filtered.filter(report => report.severity === filters.severity);
     }
 
-    // Apply time range filter
     if (filters.timeRange) {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - parseInt(filters.timeRange));
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         new Date(report.dateReported) >= cutoffDate
       );
     }
@@ -151,7 +158,6 @@ const DiseaseMap = () => {
     setFilteredReports(filtered);
   }, [reports, filters]);
 
-  // Apply filters when they change
   useEffect(() => {
     applyFilters();
   }, [reports, filters, applyFilters]);
@@ -182,14 +188,12 @@ const DiseaseMap = () => {
       </div>
 
       <div className="map-container">
-        {/* Filters Panel */}
         <div className="filters-panel">
           <h3>Filters</h3>
-          
           <div className="filter-group">
             <label>Crop:</label>
-            <select 
-              value={filters.cropName} 
+            <select
+              value={filters.cropName}
               onChange={(e) => handleFilterChange('cropName', e.target.value)}
             >
               <option value="">All Crops</option>
@@ -201,8 +205,8 @@ const DiseaseMap = () => {
 
           <div className="filter-group">
             <label>Disease:</label>
-            <select 
-              value={filters.diseaseName} 
+            <select
+              value={filters.diseaseName}
               onChange={(e) => handleFilterChange('diseaseName', e.target.value)}
             >
               <option value="">All Diseases</option>
@@ -214,8 +218,8 @@ const DiseaseMap = () => {
 
           <div className="filter-group">
             <label>Severity:</label>
-            <select 
-              value={filters.severity} 
+            <select
+              value={filters.severity}
               onChange={(e) => handleFilterChange('severity', e.target.value)}
             >
               <option value="">All Severities</option>
@@ -227,8 +231,8 @@ const DiseaseMap = () => {
 
           <div className="filter-group">
             <label>Time Range:</label>
-            <select 
-              value={filters.timeRange} 
+            <select
+              value={filters.timeRange}
               onChange={(e) => handleFilterChange('timeRange', e.target.value)}
             >
               <option value="7">Last 7 days</option>
@@ -260,10 +264,9 @@ const DiseaseMap = () => {
           </div>
         </div>
 
-        {/* Map */}
         <div className="map-wrapper">
           <MapContainer
-            center={[20.5937, 78.9629]} // Center of India
+            center={[20.5937, 78.9629]}
             zoom={5}
             style={{ height: '600px', width: '100%' }}
           >
@@ -271,8 +274,7 @@ const DiseaseMap = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
-            
-            {/* Hotspots overlay */}
+
             {showHotspots && hotspots.map((h, idx) => (
               <CircleMarker
                 key={`hs-${idx}`}
@@ -293,14 +295,13 @@ const DiseaseMap = () => {
                 </Popup>
               </CircleMarker>
             ))}
-            
-            {/* Markers */}
+
             {filteredReports.map((report) => (
               <Marker
                 key={report._id}
                 position={[
-                  report.location.coordinates[1], // lat
-                  report.location.coordinates[0]  // lng
+                  report.location.coordinates[1],
+                  report.location.coordinates[0]
                 ]}
                 icon={createPinIcon(report.severity)}
               >
@@ -308,7 +309,7 @@ const DiseaseMap = () => {
                   <div className="marker-popup">
                     <h4>{report.cropName}</h4>
                     <p><strong>Disease:</strong> {report.diseaseName}</p>
-                    <p><strong>Severity:</strong> 
+                    <p><strong>Severity:</strong>
                       <span className={`severity-badge ${report.severity}`}>
                         {report.severity}
                       </span>
@@ -316,9 +317,9 @@ const DiseaseMap = () => {
                     <p><strong>Reported:</strong> {new Date(report.dateReported).toLocaleDateString()}</p>
                     <p><strong>By:</strong> {report.farmerName || report.reportedBy || 'Anonymous'}</p>
                     {report.imageUrl && (
-                      <img 
-                        src={report.imageUrl} 
-                        alt="Disease" 
+                      <img
+                        src={report.imageUrl}
+                        alt="Disease"
                         style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '5px' }}
                       />
                     )}
@@ -331,7 +332,6 @@ const DiseaseMap = () => {
           </MapContainer>
         </div>
 
-        {/* Recent Reports Sidebar */}
         <div className="recent-reports">
           <h3>Recent Reports</h3>
           <div className="reports-list">
