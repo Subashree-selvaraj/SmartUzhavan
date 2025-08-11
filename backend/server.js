@@ -42,7 +42,12 @@ mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log('Connected to MongoDB'))
+.then(() => {
+  console.log('Connected to MongoDB');
+  // Start weekly scheduler after DB connection
+  const { startScheduler } = require('./scheduler');
+  startScheduler();
+})
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Initialize Firebase Admin SDK (using service account info from env variables)
