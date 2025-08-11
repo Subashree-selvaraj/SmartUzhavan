@@ -57,7 +57,7 @@ const DiseaseMap = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
     const newSocket = io(SOCKET_URL);
 
     newSocket.on('connect', () => {
@@ -108,7 +108,7 @@ const DiseaseMap = () => {
 
   const loadHotspots = async () => {
     try {
-      const base = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api');
+      const base = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
       const resp = await fetch(`${base}/diseaseReports/hotspots?days=14&cellSize=0.5&minCount=3`);
       const data = await resp.json();
       if (data.success) setHotspots(data.data);
