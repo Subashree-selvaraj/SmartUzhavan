@@ -3,28 +3,59 @@ const express = require('express');
 const router = express.Router();
 const DiseaseReport = require('../models/DiseaseReport');
 
+// Helper: compute dynamic severity based on nearby density in recent days
+async function computeDynamicSeverity({ diseaseName, latitude, longitude, days = 14, radiusKm = 50 }) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const earthRadiusKm = 6378.1;
+  const radiusInRadians = radiusKm / earthRadiusKm;
+
+  const count = await DiseaseReport.countDocuments({
+    diseaseName: new RegExp(`^${diseaseName}$`, 'i'),
+    dateReported: { $gte: since },
+    location: {
+      $geoWithin: {
+        $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], radiusInRadians]
+      }
+    }
+  });
+
+  if (count >= 10) return 'severe';
+  if (count >= 4) return 'moderate';
+  return 'mild';
+}
+
 // POST /api/diseaseReports - Save a new disease report
 router.post('/', async (req, res) => {
   try {
     const { farmerName, cropName, diseaseName, severity, imageUrl, latitude, longitude, reportedBy } = req.body;
 
-    // Validate required fields
-    if (!cropName || !diseaseName || !severity || !latitude || !longitude) {
-      return res.status(400).json({ error: 'Missing required fields: cropName, diseaseName, severity, latitude, longitude' });
+    // Validate required fields (severity can be omitted for auto-compute)
+    if (!cropName || !diseaseName || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: cropName, diseaseName, latitude, longitude' });
+    }
+
+    // Determine severity (auto if not provided)
+    let finalSeverity = severity;
+    if (!finalSeverity || finalSeverity === 'auto') {
+      finalSeverity = await computeDynamicSeverity({
+        diseaseName,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
+      });
     }
 
     // Create new disease report
     const diseaseReport = new DiseaseReport({
-      farmerName: farmerName || "Anonymous",
+      farmerName: farmerName || 'Anonymous',
       cropName,
       diseaseName,
-      severity,
+      severity: finalSeverity,
       imageUrl,
       location: {
-        type: "Point",
+        type: 'Point',
         coordinates: [parseFloat(longitude), parseFloat(latitude)] // [lng, lat]
       },
-      reportedBy: reportedBy || "anonymous"
+      reportedBy: reportedBy || 'anonymous'
     });
 
     const savedReport = await diseaseReport.save();
@@ -127,7 +158,7 @@ router.get('/nearby', async (req, res) => {
       location: {
         $near: {
           $geometry: {
-            type: "Point",
+            type: 'Point',
             coordinates: [longitude, latitude]
           },
           $maxDistance: radiusInMeters
@@ -145,6 +176,69 @@ router.get('/nearby', async (req, res) => {
   } catch (error) {
     console.error('Error fetching nearby reports:', error);
     res.status(500).json({ error: 'Failed to fetch nearby reports' });
+  }
+});
+
+// GET /api/diseaseReports/hotspots - AI-style aggregation of recent common diseases by grid cell
+router.get('/hotspots', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days || '14', 10);
+    const cellSize = parseFloat(req.query.cellSize || '0.5'); // degrees
+    const minCount = parseInt(req.query.minCount || '3', 10);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Aggregate into grid cells, pick top disease per cell
+    const pipeline = [
+      { $match: { dateReported: { $gte: since } } },
+      {
+        $project: {
+          diseaseName: 1,
+          lat: { $arrayElemAt: ['$location.coordinates', 1] },
+          lng: { $arrayElemAt: ['$location.coordinates', 0] },
+        }
+      },
+      {
+        $addFields: {
+          cellLat: { $multiply: [{ $round: [{ $divide: ['$lat', cellSize] }, 0] }, cellSize] },
+          cellLng: { $multiply: [{ $round: [{ $divide: ['$lng', cellSize] }, 0] }, cellSize] }
+        }
+      },
+      {
+        $group: {
+          _id: { cellLat: '$cellLat', cellLng: '$cellLng', diseaseName: '$diseaseName' },
+          count: { $sum: 1 },
+          avgLat: { $avg: '$lat' },
+          avgLng: { $avg: '$lng' }
+        }
+      },
+      { $match: { count: { $gte: minCount } } },
+      {
+        $group: {
+          _id: { cellLat: '$_id.cellLat', cellLng: '$_id.cellLng' },
+          topDisease: { $first: { name: '$_id.diseaseName', count: '$count', lat: '$avgLat', lng: '$avgLng' } },
+          total: { $sum: '$count' }
+        }
+      },
+      { $sort: { 'topDisease.count': -1 } },
+      {
+        $project: {
+          _id: 0,
+          diseaseName: '$topDisease.name',
+          count: '$topDisease.count',
+          lat: '$topDisease.lat',
+          lng: '$topDisease.lng',
+          cellLat: '$_id.cellLat',
+          cellLng: '$_id.cellLng',
+          totalInCell: '$total'
+        }
+      }
+    ];
+
+    const hotspots = await DiseaseReport.aggregate(pipeline);
+    res.json({ success: true, data: hotspots });
+  } catch (error) {
+    console.error('Error computing hotspots:', error);
+    res.status(500).json({ error: 'Failed to compute hotspots' });
   }
 });
 

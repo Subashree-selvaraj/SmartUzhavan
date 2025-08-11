@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import './CropDisease.css'; // Your CSS file path
 import { FaPaperclip } from 'react-icons/fa';
 import { diseaseApi } from '../api/diseaseApi';
+import { useAuth } from '../context/AuthContext';
 
 const translations = {
   en: {
@@ -28,6 +29,7 @@ const translations = {
 };
 
 const CropDiseaseDetectionChat = () => {
+  const { currentUser } = useAuth();
   const [currentLang, setCurrentLang] = useState('en');
   const [messages, setMessages] = useState([
     { sender: 'bot', content: translations.en.welcome },
@@ -231,27 +233,27 @@ const CropDiseaseDetectionChat = () => {
       navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
         await diseaseApi.postReport({
-          farmerName: detectionData.farmerName || "Anonymous",
+          farmerName: currentUser?.displayName || currentUser?.email || 'Anonymous',
           cropName: detectionData.crop,
           diseaseName: detectionData.disease,
-          severity: detectionData.severity || "moderate",
+          severity: 'auto',
           imageUrl: detectionData.imageUrl,
           latitude,
           longitude,
-          reportedBy: "CropDisease Detection"
+          reportedBy: currentUser?.uid || 'CropDisease Detection'
         });
         appendMessage('bot', 'Detection shared successfully with the community!');
       }, async (error) => {
         // If geolocation fails, share without location (default coordinates)
         await diseaseApi.postReport({
-          farmerName: detectionData.farmerName || "Anonymous",
+          farmerName: currentUser?.displayName || currentUser?.email || 'Anonymous',
           cropName: detectionData.crop,
           diseaseName: detectionData.disease,
-          severity: detectionData.severity || "moderate",
+          severity: 'auto',
           imageUrl: detectionData.imageUrl,
           latitude: 11.0168, // Default to Tamil Nadu center
           longitude: 76.9558,
-          reportedBy: "CropDisease Detection"
+          reportedBy: currentUser?.uid || 'CropDisease Detection'
         });
         appendMessage('bot', 'Detection shared successfully (location not available).');
       });

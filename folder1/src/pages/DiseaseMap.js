@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import io from 'socket.io-client';
@@ -8,16 +8,14 @@ import { diseaseApi } from '../api/diseaseApi';
 import './DiseaseMap.css';
 
 // Custom marker icons for different severity levels
-const createCustomIcon = (severity) => {
-  const color = severity === 'severe' ? '#ff4444' : 
-                severity === 'moderate' ? '#ff9800' : '#4caf50';
-  
-  return L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
-  });
+const createPinIcon = (severity) => {
+  const color = severity === 'severe' ? '#e53935' : severity === 'moderate' ? '#fb8c00' : '#43a047';
+  const pinSvg = `
+    <svg width="28" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path fill="${color}" d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7Z"/>
+      <circle cx="12" cy="9" r="3.5" fill="white"/>
+    </svg>`;
+  return L.divIcon({ className: 'custom-marker', html: pinSvg, iconSize: [28, 40], iconAnchor: [14, 38], popupAnchor: [0, -32] });
 };
 
 // Component to handle map bounds fitting
@@ -53,6 +51,8 @@ const DiseaseMap = () => {
     crops: [],
     diseases: []
   });
+  const [hotspots, setHotspots] = useState([]);
+  const [showHotspots, setShowHotspots] = useState(true);
   const socketRef = useRef(null);
 
   // Initialize socket connection
@@ -79,6 +79,7 @@ const DiseaseMap = () => {
   // Load initial data
   useEffect(() => {
     loadReports();
+    loadHotspots();
   }, []);
 
   const loadReports = async () => {
@@ -102,6 +103,17 @@ const DiseaseMap = () => {
       console.error('Error loading disease reports:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHotspots = async () => {
+    try {
+      const base = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+      const resp = await fetch(`${base}/diseaseReports/hotspots?days=14&cellSize=0.5&minCount=3`);
+      const data = await resp.json();
+      if (data.success) setHotspots(data.data);
+    } catch (e) {
+      console.warn('Failed to load hotspots');
     }
   };
 
@@ -150,8 +162,6 @@ const DiseaseMap = () => {
       [key]: value
     }));
   };
-
-  // Heatmap disabled until compatible package is added
 
   if (loading) {
     return (
@@ -227,6 +237,13 @@ const DiseaseMap = () => {
             </select>
           </div>
 
+          <div className="filter-group">
+            <label>
+              <input type="checkbox" checked={showHotspots} onChange={(e) => setShowHotspots(e.target.checked)} />
+              Show common hotspots (AI)
+            </label>
+          </div>
+
           <div className="stats">
             <p><strong>Total Reports:</strong> {filteredReports.length}</p>
             <div className="severity-stats">
@@ -255,6 +272,28 @@ const DiseaseMap = () => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             
+            {/* Hotspots overlay */}
+            {showHotspots && hotspots.map((h, idx) => (
+              <CircleMarker
+                key={`hs-${idx}`}
+                center={[h.lat, h.lng]}
+                radius={8 + Math.min(h.count, 10)}
+                pathOptions={{
+                  color: '#8e24aa',
+                  fillColor: '#ba68c8',
+                  fillOpacity: 0.25,
+                  weight: 2
+                }}
+              >
+                <Popup>
+                  <div>
+                    <strong>Common disease:</strong> {h.diseaseName}<br/>
+                    Reports: {h.count} (last 14 days)
+                  </div>
+                </Popup>
+              </CircleMarker>
+            ))}
+            
             {/* Markers */}
             {filteredReports.map((report) => (
               <Marker
@@ -263,7 +302,7 @@ const DiseaseMap = () => {
                   report.location.coordinates[1], // lat
                   report.location.coordinates[0]  // lng
                 ]}
-                icon={createCustomIcon(report.severity)}
+                icon={createPinIcon(report.severity)}
               >
                 <Popup>
                   <div className="marker-popup">
@@ -275,7 +314,7 @@ const DiseaseMap = () => {
                       </span>
                     </p>
                     <p><strong>Reported:</strong> {new Date(report.dateReported).toLocaleDateString()}</p>
-                    <p><strong>By:</strong> {report.farmerName}</p>
+                    <p><strong>By:</strong> {report.farmerName || report.reportedBy || 'Anonymous'}</p>
                     {report.imageUrl && (
                       <img 
                         src={report.imageUrl} 
