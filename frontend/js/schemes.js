@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api/schemes';
+const API_URL = (window.SCHEMES_API_URL || `${window.location.origin}/api/schemes`);
 const LANGS = {
   en: {
     title: 'Farmer Schemes Portal',

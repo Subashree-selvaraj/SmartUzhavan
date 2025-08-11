@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
  // Assuming you have a CSS file for additional styles
 // Constants
-const API_URL = 'http://localhost:5000/api/schemes';
+const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' ? window.location.origin : '');
+const API_URL = `${API_BASE}/api/schemes`;
 
 const LANGS = {
   en: {

@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const API_BASE = window.API_BASE || `${window.location.origin}/api`;
+
   // --- Event Listeners ---
   uploadBtn.addEventListener('click', () => imageUpload.click());
   imageUpload.addEventListener('change', handleImageUpload);
@@ -61,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/predict?lang=${currentLang}`, {
+      const response = await fetch(`${API_BASE}/predict?lang=${currentLang}`, {
         method: 'POST',
         body: formData,
       });

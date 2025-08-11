@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api');
+
 const OutbreakHeatmap = () => {
   const [district, setDistrict] = useState('');
   const [outbreaks, setOutbreaks] = useState([]);
@@ -9,7 +11,7 @@ const OutbreakHeatmap = () => {
 
   useEffect(() => {
     if (!district) return;
-    fetch(`/api/outbreak/outbreaks?district=${encodeURIComponent(district)}`)
+    fetch(`${API_BASE}/outbreak/outbreaks?district=${encodeURIComponent(district)}`)
       .then(res => res.json())
       .then(data => setOutbreaks(data))
       .catch(() => setOutbreaks([]));

@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth');
 const schemesRoutes = require('./routes/schemes');
 const predictRoutes = require('./routes/predict');
 const diseaseReportsRoutes = require('./routes/diseaseReports');
+const outbreakRoutes = require('./routes/outbreak');
 
 const admin = require('firebase-admin');
 
@@ -21,12 +22,18 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://0.0.0.0:3000',
-      'http://localhost:3001'
-    ],
+    origin: (origin, callback) => {
+      const envOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
+      const defaultOrigins = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://0.0.0.0:3000',
+        'http://localhost:3001'
+      ];
+      const allowed = envOrigins.length > 0 ? envOrigins : defaultOrigins;
+      if (!origin || allowed.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST']
   }
 });
@@ -77,13 +84,19 @@ try {
 }
 
 // CORS configuration - ONLY ONCE before any routes/middleware
+const envOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
+const allowedOrigins = envOrigins.length > 0 ? envOrigins : [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://0.0.0.0:3000',
+  'http://localhost:3001'
+];
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://0.0.0.0:3000',
-    'http://localhost:3001'
-  ],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS not allowed'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
@@ -127,12 +140,6 @@ const optionalFirebaseAuth = async (req, res, next) => {
   }
   next();
 };
-
-// Serve React app from folder1/build if it exists
-const reactBuildPath = path.join(__dirname, '../folder1/build');
-if (fs.existsSync(reactBuildPath)) {
-  app.use('/app', express.static(reactBuildPath));
-}
 
 // Mock data storage
 let mockData = {
@@ -206,6 +213,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/schemes', schemesRoutes);
 app.use('/api', predictRoutes);
 app.use('/api/diseaseReports', diseaseReportsRoutes);
+app.use('/api/outbreak', outbreakRoutes);
 
 // Serve frontend root
 app.get('/', (req, res) => {
