@@ -1,5 +1,13 @@
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const API_BASE = (() => {
+  if (process.env.REACT_APP_API_BASE) return process.env.REACT_APP_API_BASE;
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin.replace(/\/$/, '');
+    const isCRADev = origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000');
+    return isCRADev ? '/api' : `${origin}/api`;
+  }
+  return 'http://localhost:5000/api';
+})();
 
 export const diseaseApi = {
   // Post a new disease report
