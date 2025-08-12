@@ -20,18 +20,50 @@ const admin = require('firebase-admin');
 
 const app = express();
 const server = http.createServer(app);
+
+// Helpers: allowed origins resolution with wildcard support
+const getAllowedOrigins = () => {
+  const envOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://0.0.0.0:3000',
+    'http://localhost:3001'
+  ];
+  return envOrigins.length > 0 ? envOrigins : defaultOrigins;
+};
+
+const normalize = (value) => String(value || '').trim().replace(/\/$/, '').toLowerCase();
+const getHost = (value) => {
+  try { return new URL(value).host.toLowerCase(); } catch { return normalize(value).replace(/^https?:\/\//, ''); }
+};
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // non-browser or same-origin
+  const allowed = getAllowedOrigins();
+  const originNorm = normalize(origin);
+  const originHost = getHost(origin);
+  return allowed.some((pattern) => {
+    const patNorm = normalize(pattern);
+    if (!patNorm) return false;
+    // Wildcard subdomain support: *.example.com
+    if (patNorm.startsWith('*.')) {
+      const suffix = patNorm.slice(1); // .example.com
+      return originHost.endsWith(suffix.replace(/^\./, ''));
+    }
+    // Exact origin match (with protocol)
+    if (patNorm.startsWith('http://') || patNorm.startsWith('https://')) {
+      return originNorm === patNorm;
+    }
+    // Hostname match
+    return originHost === patNorm;
+  });
+};
+
 const io = socketIo(server, {
   cors: {
     origin: (origin, callback) => {
-      const envOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
-      const defaultOrigins = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://0.0.0.0:3000',
-        'http://localhost:3001'
-      ];
-      const allowed = envOrigins.length > 0 ? envOrigins : defaultOrigins;
-      if (!origin || allowed.includes(origin)) return callback(null, true);
+      if (isOriginAllowed(origin)) return callback(null, true);
       return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST']
@@ -94,17 +126,9 @@ try {
 }
 
 // CORS configuration - ONLY ONCE before any routes/middleware
-const envOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
-const allowedOrigins = envOrigins.length > 0 ? envOrigins : [
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://0.0.0.0:3000',
-  'http://localhost:3001'
-];
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
     return callback(new Error('CORS not allowed'));
   },
   credentials: true,
