@@ -261,6 +261,11 @@ app.get('*', (req, res, next) => {
   return res.sendFile(path.join(buildPath, 'index.html'));
 });
 
+// Health check route for Render
+app.get('/healthz', (req, res) => {
+  res.status(200).send('ok');
+});
+
 app.get('/api/prices', (req, res) => {
   const { crop, district } = req.query;
   if (!crop) return res.status(400).json({ error: 'Crop parameter is required' });
