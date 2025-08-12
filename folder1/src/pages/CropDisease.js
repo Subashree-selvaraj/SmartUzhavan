@@ -4,6 +4,7 @@ import './CropDisease.css'; // Your CSS file path
 import { FaPaperclip } from 'react-icons/fa';
 import { diseaseApi } from '../api/diseaseApi';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
 
@@ -453,10 +454,10 @@ const CropDiseaseDetectionChat = () => {
 
         {/* Disease Map Button */}
         <div className="disease-map-section">
-          <a href="/disease-map" className="btn-disease-map">
+          <Link to="/disease-map" className="btn-disease-map">
             <i className="fas fa-map-marked-alt"></i>
             View Disease Map
-          </a>
+          </Link>
         </div>
       </div>
   );
