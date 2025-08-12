@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import io from 'socket.io-client';
 import { diseaseApi } from '../api/diseaseApi';
+import { API_BASE } from '../api/diseaseApi';
 import './DiseaseMap.css';
 
 // Custom marker icons for different severity levels
@@ -57,9 +58,33 @@ const DiseaseMap = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    // Derive socket base from env, URL param, window override, or API_BASE
+    let SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
+    if (!SOCKET_URL && typeof window !== 'undefined') {
+      try {
+        const urlParam = new URLSearchParams(window.location.search).get('socket');
+        if (urlParam) SOCKET_URL = urlParam;
+      } catch (_) {}
+      if (!SOCKET_URL && window.__SOCKET_URL__) SOCKET_URL = String(window.__SOCKET_URL__);
+      if (!SOCKET_URL) {
+        try {
+          const stored = window.localStorage.getItem('SOCKET_URL');
+          if (stored) SOCKET_URL = stored;
+        } catch (_) {}
+      }
+    }
+    if (!SOCKET_URL) {
+      // If API_BASE looks like https://host/api, strip trailing /api for socket
+      try {
+        const api = API_BASE.replace(/\/$/, '');
+        SOCKET_URL = api.endsWith('/api') ? api.slice(0, -4) : api;
+      } catch (_) {
+        SOCKET_URL = (typeof window !== 'undefined' ? window.location.origin : '');
+      }
+    }
+ 
     const newSocket = io(SOCKET_URL);
-
+ 
     newSocket.on('connect', () => {
       console.log('Connected to disease map socket');
     });
@@ -108,7 +133,8 @@ const DiseaseMap = () => {
 
   const loadHotspots = async () => {
     try {
-      const base = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api');
+      // Reuse the resolved API_BASE
+      const base = API_BASE;
       const resp = await fetch(`${base}/diseaseReports/hotspots?days=14&cellSize=0.5&minCount=3`);
       const data = await resp.json();
       if (data.success) setHotspots(data.data);

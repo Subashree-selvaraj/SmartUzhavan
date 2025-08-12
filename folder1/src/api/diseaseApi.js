@@ -1,13 +1,32 @@
 
 const API_BASE = (() => {
-  if (process.env.REACT_APP_API_BASE) return process.env.REACT_APP_API_BASE;
+  // Highest priority: build-time env
+  const envBase = process.env.REACT_APP_API_BASE;
+  if (envBase) return envBase.replace(/\/$/, '');
+
+  // Runtime overrides (no rebuild needed)
   if (typeof window !== 'undefined') {
+    try {
+      const urlParam = new URLSearchParams(window.location.search).get('api');
+      if (urlParam) return urlParam.replace(/\/$/, '');
+    } catch (_) {}
+
+    if (window.__API_BASE__) return String(window.__API_BASE__).replace(/\/$/, '');
+    try {
+      const stored = window.localStorage.getItem('API_BASE');
+      if (stored) return stored.replace(/\/$/, '');
+    } catch (_) {}
+
     const origin = window.location.origin.replace(/\/$/, '');
     const isCRADev = origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000');
     return isCRADev ? '/api' : `${origin}/api`;
   }
+
+  // Node/test fallback
   return 'http://localhost:5000/api';
 })();
+
+export { API_BASE };
 
 export const diseaseApi = {
   // Post a new disease report
