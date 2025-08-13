@@ -264,7 +264,7 @@ function WeatherPage() {
 
   const generateWeeklyForecast = (currentData) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const weatherTypes = ['clear', 'clouds', 'rain', 'thunderstorm', 'drizzle'];
+    // const weatherTypes = ['clear', 'clouds', 'rain', 'thunderstorm', 'drizzle']; // reserved for future weather variations
     const currentTemp = currentData.main.temp;
     const currentWeather = currentData.weather[0].main.toLowerCase();
 

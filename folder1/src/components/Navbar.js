@@ -59,11 +59,16 @@ const Navbar = () => {
           </Link>
         </div>
 
-        <div className="nav-right">
+        <div className={`nav-right ${isMenuOpen ? 'active' : ''}`}>
           <ul className={`navbar-menu ${isMenuOpen ? 'active' : ''}`}>
             <li>
               <Link to="/" className="menu-item" onClick={() => setIsMenuOpen(false)}>
                 {lang === 'en' ? 'Home' : 'முகப்பு'}
+              </Link>
+            </li>
+            <li className="mobile-only">
+              <Link to="/about" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+                {lang === 'en' ? 'About' : 'எங்களை பற்றி'}
               </Link>
             </li>
             <li>
@@ -74,6 +79,11 @@ const Navbar = () => {
             <li>
               <Link onClick={toggleLanguage} to="#" className="menu-item">
                 {lang === 'en' ? 'தமிழ்' : 'English'}
+              </Link>
+            </li>
+            <li className="mobile-only">
+              <Link to="/login" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+                {lang === 'en' ? 'Login' : 'உள்நுழைய'}
               </Link>
             </li>
           </ul>

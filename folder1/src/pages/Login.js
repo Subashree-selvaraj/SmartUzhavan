@@ -10,7 +10,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  // const [isRecording, setIsRecording] = useState(false); // reserved for future voice features
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [showOtpForm, setShowOtpForm] = useState(false);
   

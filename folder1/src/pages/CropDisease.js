@@ -40,7 +40,7 @@ const CropDiseaseDetectionChat = () => {
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const [selectedImage, setSelectedImage] = useState(null); // reserved for future enhancements
+  const [selectedImage, setSelectedImage] = useState(null); // used for image sharing functionality
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [detectionData, setDetectionData] = useState(null);

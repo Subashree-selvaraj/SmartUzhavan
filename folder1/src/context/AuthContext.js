@@ -41,10 +41,18 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+// Initialize Firebase with error handling
+let app, auth, googleProvider;
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
+  console.log('Firebase initialized successfully');
+} catch (error) {
+  console.error('Firebase initialization failed:', error);
+  console.warn('Running in development mode without Firebase authentication');
+  console.warn('Please check your Firebase API key and configuration');
+}
 
 const AuthContext = createContext();
 
@@ -58,16 +66,25 @@ export function AuthProvider({ children }) {
 
   // Sign up with email and password
   function signup(email, password) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
   // Sign in with email and password
   function signin(email, password) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return signInWithEmailAndPassword(auth, email, password);
   }
 
   // Sign in with Google
   function signInWithGoogle() {
+    if (!auth || !googleProvider) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     googleProvider.setCustomParameters({
       prompt: 'select_account'
     });
@@ -76,6 +93,9 @@ export function AuthProvider({ children }) {
 
   // Phone authentication
   function setupRecaptcha(elementId) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return new RecaptchaVerifier(auth, elementId, {
       'size': 'normal',
       'callback': () => {
@@ -88,16 +108,27 @@ export function AuthProvider({ children }) {
   }
 
   function sendOTP(phoneNumber, recaptchaVerifier) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
   }
 
   // Logout
   function logout() {
     localStorage.removeItem('user');
+    if (!auth) {
+      return Promise.resolve();
+    }
     return signOut(auth);
   }
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);

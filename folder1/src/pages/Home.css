@@ -727,6 +727,25 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.footer-link-btn {
+  background: none;
+  border: none;
+  color: #81C784;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.footer-link-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .copyright-advanced {
   opacity: 0.8;
   border-top: 1px solid rgba(255, 255, 255, 0.2);

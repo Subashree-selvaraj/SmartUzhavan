@@ -10,9 +10,9 @@ const AgriChatbot = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('auto');
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentSpeakingId, setCurrentSpeakingId] = useState(null);
-  const [currentAudio, setCurrentAudio] = useState(null);
+  // const [isSpeaking, setIsSpeaking] = useState(false); // reserved for TTS features
+  // const [currentSpeakingId, setCurrentSpeakingId] = useState(null); // reserved for TTS features
+  // const [currentAudio, setCurrentAudio] = useState(null); // reserved for TTS features
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const messagesEndRef = useRef(null);
