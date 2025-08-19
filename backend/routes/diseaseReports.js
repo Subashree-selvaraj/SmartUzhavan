@@ -3,6 +3,41 @@ const express = require('express');
 const router = express.Router();
 const DiseaseReport = require('../models/DiseaseReport');
 
+// Microsoft Translator API configuration
+const MS_TRANSLATOR_API_KEY = process.env.AZURE_TRANSLATOR_KEY || '7b55hs2ooc2j1qKh8ZPIsd8uWZSnmZ7kGmGWoctle7kYjL4dVmoNJQQJ99BGACGhslBXJ3w3AAAbACOG3AST';
+const MS_TRANSLATOR_REGION = process.env.AZURE_TRANSLATOR_REGION || 'centralindia';
+
+// Function to translate text using Microsoft Translator API
+async function translateText(text, toLang = 'ta', fromLang = 'en') {
+  if (!text || text.trim() === '') return '';
+  
+  try {
+    const endpoint = 'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0';
+    const url = `${endpoint}&from=${fromLang}&to=${toLang}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': MS_TRANSLATOR_API_KEY,
+        'Ocp-Apim-Subscription-Region': MS_TRANSLATOR_REGION,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([{ Text: text }])
+    });
+
+    if (!response.ok) {
+      console.warn('Translation API error:', response.status);
+      return text; // Return original text if translation fails
+    }
+
+    const data = await response.json();
+    return data[0]?.translations[0]?.text || text;
+  } catch (error) {
+    console.error('Translation error:', error);
+    return text; // Return original text if translation fails
+  }
+}
+
 // Helper: compute dynamic severity based on nearby density in recent days
 async function computeDynamicSeverity({ diseaseName, latitude, longitude, days = 14, radiusKm = 50 }) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -44,11 +79,22 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Create new disease report
+    // Translate crop name and disease name to Tamil
+    const cropName_ta = await translateText(cropName, 'ta', 'en');
+    const diseaseName_ta = await translateText(diseaseName, 'ta', 'en');
+
+    // Create new disease report with both languages
     const diseaseReport = new DiseaseReport({
       farmerName: farmerName || 'Anonymous',
-      cropName,
-      diseaseName,
+      // English fields
+      cropName_en: cropName,
+      diseaseName_en: diseaseName,
+      // Tamil fields
+      cropName_ta: cropName_ta,
+      diseaseName_ta: diseaseName_ta,
+      // Legacy fields for backward compatibility
+      cropName: cropName,
+      diseaseName: diseaseName,
       severity: finalSeverity,
       imageUrl,
       location: {
@@ -79,6 +125,66 @@ router.post('/', async (req, res) => {
   }
 });
 
+// POST /api/diseaseReports/migrate - Migrate existing reports to include both languages
+router.post('/migrate', async (req, res) => {
+  try {
+    // Find all reports that don't have Tamil translations
+    const reportsToMigrate = await DiseaseReport.find({
+      $or: [
+        { cropName_ta: { $exists: false } },
+        { diseaseName_ta: { $exists: false } },
+        { cropName_en: { $exists: false } },
+        { diseaseName_en: { $exists: false } }
+      ]
+    });
+
+    let migratedCount = 0;
+    
+    for (const report of reportsToMigrate) {
+      try {
+        // Translate crop name to Tamil if not exists
+        if (!report.cropName_ta && report.cropName) {
+          report.cropName_ta = await translateText(report.cropName, 'ta', 'en');
+        }
+        
+        // Translate disease name to Tamil if not exists
+        if (!report.diseaseName_ta && report.diseaseName) {
+          report.diseaseName_ta = await translateText(report.diseaseName, 'ta', 'en');
+        }
+        
+        // Set English fields if not exists
+        if (!report.cropName_en && report.cropName) {
+          report.cropName_en = report.cropName;
+        }
+        
+        if (!report.diseaseName_en && report.diseaseName) {
+          report.diseaseName_en = report.diseaseName;
+        }
+        
+        await report.save();
+        migratedCount++;
+        
+        // Add delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.error(`Error migrating report ${report._id}:`, error);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Migrated ${migratedCount} reports to include both languages`,
+      totalReports: reportsToMigrate.length,
+      migratedCount
+    });
+
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
 // GET /api/diseaseReports - Fetch disease reports with filters
 router.get('/', async (req, res) => {
   try {
@@ -89,7 +195,8 @@ router.get('/', async (req, res) => {
       startDate,
       endDate,
       page = 1,
-      limit = 100
+      limit = 100,
+      lang = 'en' // Default to English if no language specified
     } = req.query;
 
     // Build filter object
@@ -117,13 +224,28 @@ router.get('/', async (req, res) => {
 
     const total = await DiseaseReport.countDocuments(filter);
 
-    // Get distinct values for filters
-    const distinctCrops = await DiseaseReport.distinct('cropName');
-    const distinctDiseases = await DiseaseReport.distinct('diseaseName');
+    // Get distinct values for filters based on language
+    const distinctCrops = await DiseaseReport.distinct(lang === 'ta' ? 'cropName_ta' : 'cropName_en');
+    const distinctDiseases = await DiseaseReport.distinct(lang === 'ta' ? 'diseaseName_ta' : 'diseaseName_en');
+
+    // Map reports to return language-specific data
+    const mappedReports = reports.map(report => ({
+      _id: report._id,
+      farmerName: report.farmerName,
+      cropName: lang === 'ta' ? report.cropName_ta : report.cropName_en,
+      diseaseName: lang === 'ta' ? report.diseaseName_ta : report.diseaseName_en,
+      severity: report.severity,
+      imageUrl: report.imageUrl,
+      location: report.location,
+      dateReported: report.dateReported,
+      reportedBy: report.reportedBy,
+      reporterEmail: report.reporterEmail,
+      reporterPhone: report.reporterPhone
+    }));
 
     res.json({
       success: true,
-      data: reports,
+      data: mappedReports,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -145,7 +267,7 @@ router.get('/', async (req, res) => {
 // GET /api/diseaseReports/nearby - Get nearby reports using geospatial query
 router.get('/nearby', async (req, res) => {
   try {
-    const { lat, lng, radiusKm = 50 } = req.query;
+    const { lat, lng, radiusKm = 50, lang = 'en' } = req.query;
 
     if (!lat || !lng) {
       return res.status(400).json({ error: 'Latitude and longitude are required' });
@@ -168,9 +290,24 @@ router.get('/nearby', async (req, res) => {
       }
     }).limit(100);
 
+    // Map reports to return language-specific data
+    const mappedReports = nearbyReports.map(report => ({
+      _id: report._id,
+      farmerName: report.farmerName,
+      cropName: lang === 'ta' ? report.cropName_ta : report.cropName_en,
+      diseaseName: lang === 'ta' ? report.diseaseName_ta : report.diseaseName_en,
+      severity: report.severity,
+      imageUrl: report.imageUrl,
+      location: report.location,
+      dateReported: report.dateReported,
+      reportedBy: report.reportedBy,
+      reporterEmail: report.reporterEmail,
+      reporterPhone: report.reporterPhone
+    }));
+
     res.json({
       success: true,
-      data: nearbyReports,
+      data: mappedReports,
       center: { lat: latitude, lng: longitude },
       radiusKm: parseFloat(radiusKm)
     });

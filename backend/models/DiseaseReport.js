@@ -3,6 +3,13 @@ const mongoose = require("mongoose");
 
 const DiseaseReportSchema = new mongoose.Schema({
   farmerName: { type: String, default: "Anonymous" },
+  // English fields
+  cropName_en: { type: String, required: true },
+  diseaseName_en: { type: String, required: true },
+  // Tamil fields
+  cropName_ta: { type: String, required: true },
+  diseaseName_ta: { type: String, required: true },
+  // Legacy fields for backward compatibility
   cropName: { type: String, required: true },
   diseaseName: { type: String, required: true },
   severity: { type: String, enum: ["mild", "moderate", "severe"], required: true },

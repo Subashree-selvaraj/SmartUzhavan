@@ -8,6 +8,74 @@ import { diseaseApi } from '../api/diseaseApi';
 import { API_BASE } from '../api/diseaseApi';
 import './DiseaseMap.css';
 
+// Language translations
+const translations = {
+  en: {
+    pageTitle: '🗺️ Real-time Disease Map',
+    pageSubtitle: 'Track crop diseases across India in real-time',
+    filtersTitle: 'Filters',
+    cropLabel: 'Crop:',
+    cropPlaceholder: 'All Crops',
+    diseaseLabel: 'Disease:',
+    diseasePlaceholder: 'All Diseases',
+    severityLabel: 'Severity:',
+    severityPlaceholder: 'All Severities',
+    timeRangeLabel: 'Time Range:',
+    timeRange7Days: 'Last 7 days',
+    timeRange30Days: 'Last 30 days',
+    timeRange90Days: 'Last 3 months',
+    hotspotsLabel: 'Show common hotspots (AI)',
+    totalReports: 'Total Reports:',
+    severityStats: {
+      severe: 'Severe',
+      moderate: 'Moderate',
+      mild: 'Mild'
+    },
+    recentReportsTitle: 'Recent Reports',
+    loadMoreBtn: 'Load More Reports',
+    loadingMore: 'Loading...',
+    loadingMessage: 'Loading disease map...',
+    loadingTip1: '💡 Tip: The map is loading recent disease reports from the last 30 days',
+    loadingTip2: '🌱 Tip: Use filters to narrow down results once loaded',
+    markersLimitMessage: 'Showing first 200 markers. Use filters to narrow results.',
+    languageButton: '🌐 Language',
+    languageEnglish: 'English',
+    languageTamil: 'தமிழ்'
+  },
+  ta: {
+    pageTitle: '🗺️ நேரலை நோய் வரைபடம்',
+    pageSubtitle: 'இந்தியா முழுவதும் பயிர் நோய்களை நேரலை கண்காணிக்கவும்',
+    filtersTitle: 'வடிப்பான்கள்',
+    cropLabel: 'பயிர்:',
+    cropPlaceholder: 'அனைத்து பயிர்களும்',
+    diseaseLabel: 'நோய்:',
+    diseasePlaceholder: 'அனைத்து நோய்களும்',
+    severityLabel: 'கடுமை:',
+    severityPlaceholder: 'அனைத்து கடுமைகளும்',
+    timeRangeLabel: 'நேர வரம்பு:',
+    timeRange7Days: 'கடந்த 7 நாட்கள்',
+    timeRange30Days: 'கடந்த 30 நாட்கள்',
+    timeRange90Days: 'கடந்த 3 மாதங்கள்',
+    hotspotsLabel: 'பொதுவான சூடான இடங்களை காட்டு (AI)',
+    totalReports: 'மொத்த அறிக்கைகள்:',
+    severityStats: {
+      severe: 'கடுமையானது',
+      moderate: 'மிதமானது',
+      mild: 'மென்மையானது'
+    },
+    recentReportsTitle: 'சமீபத்திய அறிக்கைகள்',
+    loadMoreBtn: 'மேலும் அறிக்கைகளை ஏற்று',
+    loadingMore: 'ஏற்றுகிறது...',
+    loadingMessage: 'நோய் வரைபடம் ஏற்றுகிறது...',
+    loadingTip1: '💡 குறிப்பு: வரைபடம் கடந்த 30 நாட்களின் சமீபத்திய நோய் அறிக்கைகளை ஏற்றுகிறது',
+    loadingTip2: '🌱 குறிப்பு: ஏற்றப்பட்டவுடன் முடிவுகளை குறைக்க வடிப்பான்களைப் பயன்படுத்தவும்',
+    markersLimitMessage: 'முதல் 200 குறிப்பான்களை காட்டுகிறது. முடிவுகளை குறைக்க வடிப்பான்களைப் பயன்படுத்தவும்.',
+    languageButton: '🌐 மொழி',
+    languageEnglish: 'English',
+    languageTamil: 'தமிழ்'
+  }
+};
+
 // Custom marker icons for different severity levels
 const createPinIcon = (severity) => {
   const color = severity === 'severe' ? '#e53935' : severity === 'moderate' ? '#fb8c00' : '#43a047';
@@ -46,6 +114,13 @@ const DiseaseMap = () => {
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hotspotsLoading, setHotspotsLoading] = useState(false);
+  const [currentLang, setCurrentLang] = useState(() => {
+    // Get language from localStorage or default to Tamil
+    return localStorage.getItem('diseasemap_lang') || 'ta';
+  });
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [filters, setFilters] = useState({
     cropName: '',
     diseaseName: '',
@@ -58,7 +133,11 @@ const DiseaseMap = () => {
   });
   const [hotspots, setHotspots] = useState([]);
   const [showHotspots, setShowHotspots] = useState(true);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const socketRef = useRef(null);
+  const langDropdownRef = useRef(null);
+  const langBtnRef = useRef(null);
 
   // Initialize socket connection
   useEffect(() => {
@@ -125,22 +204,24 @@ const DiseaseMap = () => {
   useEffect(() => {
     loadReports();
     loadHotspots();
+    // Reduce polling frequency from 30s to 2 minutes for better performance
     const id = setInterval(() => {
       loadReports();
-    }, 30000);
+    }, 120000); // 2 minutes instead of 30 seconds
     return () => clearInterval(id);
   }, []);
 
   const loadReports = async () => {
     setLoading(true);
     try {
-      // Get reports from last 90 days for performance
+      // Reduce initial load to last 30 days instead of 90 for faster loading
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 90);
+      startDate.setDate(startDate.getDate() - 30);
       
       const response = await diseaseApi.fetchReports({
         startDate: startDate.toISOString(),
-        limit: 1000
+        limit: 500, // Reduce from 1000 to 500 for faster initial load
+        lang: currentLang // Pass current language to API
       });
 
       setReports(response.data || []);
@@ -157,13 +238,45 @@ const DiseaseMap = () => {
 
   const loadHotspots = async () => {
     try {
-      // Reuse the resolved API_BASE
+      // Add loading state for hotspots
       const base = API_BASE;
-      const resp = await fetch(`${base}/diseaseReports/hotspots?days=14&cellSize=0.5&minCount=3`);
+      const resp = await fetch(`${base}/diseaseReports/hotspots?days=7&cellSize=1.0&minCount=2&lang=${currentLang}`); // Pass language
       const data = await resp.json();
       if (data.success) setHotspots(data.data);
     } catch (e) {
       console.warn('Failed to load hotspots');
+    } finally {
+      setHotspotsLoading(false);
+    }
+  };
+
+  const loadMoreReports = async () => {
+    if (loadingMore || !hasMoreData) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      
+      const response = await diseaseApi.fetchReports({
+        startDate: startDate.toISOString(),
+        limit: 500,
+        page: nextPage,
+        lang: currentLang // Pass current language to API
+      });
+
+      if (response.data && response.data.length > 0) {
+        setReports(prev => [...prev, ...response.data]);
+        setCurrentPage(nextPage);
+        setHasMoreData(response.data.length === 500);
+      } else {
+        setHasMoreData(false);
+      }
+    } catch (error) {
+      console.error('Error loading more reports:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -206,6 +319,16 @@ const DiseaseMap = () => {
     applyFilters();
   }, [reports, filters, applyFilters]);
 
+  // Reload data when language changes
+  useEffect(() => {
+    if (reports.length > 0) {
+      // Show loading notification for language change
+      setLoading(true);
+      loadReports();
+      loadHotspots();
+    }
+  }, [currentLang]);
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
       ...prev,
@@ -213,12 +336,55 @@ const DiseaseMap = () => {
     }));
   };
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (
+        langDropdownRef.current &&
+        !langDropdownRef.current.contains(e.target) &&
+        langBtnRef.current &&
+        !langBtnRef.current.contains(e.target)
+      ) {
+        setShowLangDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  // Handle language change
+  const switchLanguage = (lang) => {
+    if (lang === currentLang) return; // Don't switch if same language
+    
+    setCurrentLang(lang);
+    setShowLangDropdown(false);
+    // Save language choice to localStorage
+    localStorage.setItem('diseasemap_lang', lang);
+    
+    // Show notification
+    const notification = document.createElement('div');
+    notification.className = 'lang-switch-notification';
+    notification.textContent = `🔄 Switching to ${lang === 'ta' ? 'Tamil' : 'English'}...`;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 3000);
+  };
+
   if (loading) {
     return (
       <div className="disease-map-page">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading disease map...</p>
+          <p>{translations[currentLang].loadingMessage}</p>
+          <div className="loading-tips">
+            <p>{translations[currentLang].loadingTip1}</p>
+            <p>{translations[currentLang].loadingTip2}</p>
+          </div>
         </div>
       </div>
     );
@@ -227,22 +393,67 @@ const DiseaseMap = () => {
   return (
     <div className="disease-map-page">
       <div className="map-header">
-        <h1>🗺️ Real-time Disease Map</h1>
-        <p>Track crop diseases across India in real-time</p>
+        <div className="header-content">
+          <div className="header-text">
+            <h1>{translations[currentLang].pageTitle}</h1>
+            <p>{translations[currentLang].pageSubtitle}</p>
+          </div>
+          
+          {/* Language Switcher */}
+          <div className="lang-switcher">
+            <button
+              className="lang-btn"
+              onClick={() => setShowLangDropdown(!showLangDropdown)}
+              ref={langBtnRef}
+              aria-haspopup="true"
+              aria-expanded={showLangDropdown}
+              type="button"
+            >
+              {translations[currentLang].languageButton} 
+              <span className="current-lang-indicator">
+                {currentLang === 'ta' ? '🇮🇳' : '🇬🇧'}
+              </span>
+            </button>
+            {showLangDropdown && (
+              <div
+                ref={langDropdownRef}
+                className="lang-dropdown"
+                role="menu"
+              >
+                <button
+                  className="lang-dropdown-btn"
+                  onClick={() => switchLanguage('en')}
+                  role="menuitem"
+                  type="button"
+                >
+                  🇬🇧 {translations[currentLang].languageEnglish}
+                </button>
+                <button
+                  className="lang-dropdown-btn"
+                  onClick={() => switchLanguage('ta')}
+                  role="menuitem"
+                  type="button"
+                >
+                  🇮🇳 {translations[currentLang].languageTamil}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="map-container">
         {/* Filters Panel */}
         <div className="filters-panel">
-          <h3>Filters</h3>
+          <h3>{translations[currentLang].filtersTitle}</h3>
           
           <div className="filter-group">
-            <label>Crop:</label>
+            <label>{translations[currentLang].cropLabel}</label>
             <select 
               value={filters.cropName} 
               onChange={(e) => handleFilterChange('cropName', e.target.value)}
             >
-              <option value="">All Crops</option>
+              <option value="">{translations[currentLang].cropPlaceholder}</option>
               {availableFilters.crops.map(crop => (
                 <option key={crop} value={crop}>{crop}</option>
               ))}
@@ -250,12 +461,12 @@ const DiseaseMap = () => {
           </div>
 
           <div className="filter-group">
-            <label>Disease:</label>
+            <label>{translations[currentLang].diseaseLabel}</label>
             <select 
               value={filters.diseaseName} 
               onChange={(e) => handleFilterChange('diseaseName', e.target.value)}
             >
-              <option value="">All Diseases</option>
+              <option value="">{translations[currentLang].diseasePlaceholder}</option>
               {availableFilters.diseases.map(disease => (
                 <option key={disease} value={disease}>{disease}</option>
               ))}
@@ -263,48 +474,48 @@ const DiseaseMap = () => {
           </div>
 
           <div className="filter-group">
-            <label>Severity:</label>
+            <label>{translations[currentLang].severityLabel}</label>
             <select 
               value={filters.severity} 
               onChange={(e) => handleFilterChange('severity', e.target.value)}
             >
-              <option value="">All Severities</option>
-              <option value="mild">Mild</option>
-              <option value="moderate">Moderate</option>
-              <option value="severe">Severe</option>
+              <option value="">{translations[currentLang].severityPlaceholder}</option>
+              <option value="mild">{translations[currentLang].severityStats.mild}</option>
+              <option value="moderate">{translations[currentLang].severityStats.moderate}</option>
+              <option value="severe">{translations[currentLang].severityStats.severe}</option>
             </select>
           </div>
 
           <div className="filter-group">
-            <label>Time Range:</label>
+            <label>{translations[currentLang].timeRangeLabel}</label>
             <select 
               value={filters.timeRange} 
               onChange={(e) => handleFilterChange('timeRange', e.target.value)}
             >
-              <option value="7">Last 7 days</option>
-              <option value="30">Last 30 days</option>
-              <option value="90">Last 3 months</option>
+              <option value="7">{translations[currentLang].timeRange7Days}</option>
+              <option value="30">{translations[currentLang].timeRange30Days}</option>
+              <option value="90">{translations[currentLang].timeRange90Days}</option>
             </select>
           </div>
 
           <div className="filter-group">
             <label>
               <input type="checkbox" checked={showHotspots} onChange={(e) => setShowHotspots(e.target.checked)} />
-              Show common hotspots (AI)
+              {translations[currentLang].hotspotsLabel} {hotspotsLoading && <span className="loading-dots">...</span>}
             </label>
           </div>
 
           <div className="stats">
-            <p><strong>Total Reports:</strong> {filteredReports.length}</p>
+            <p><strong>{translations[currentLang].totalReports}</strong> {filteredReports.length}</p>
             <div className="severity-stats">
               <div className="stat severe">
-                Severe: {filteredReports.filter(r => r.severity === 'severe').length}
+                {translations[currentLang].severityStats.severe}: {filteredReports.filter(r => r.severity === 'severe').length}
               </div>
               <div className="stat moderate">
-                Moderate: {filteredReports.filter(r => r.severity === 'moderate').length}
+                {translations[currentLang].severityStats.moderate}: {filteredReports.filter(r => r.severity === 'moderate').length}
               </div>
               <div className="stat mild">
-                Mild: {filteredReports.filter(r => r.severity === 'mild').length}
+                {translations[currentLang].severityStats.mild}: {filteredReports.filter(r => r.severity === 'mild').length}
               </div>
             </div>
           </div>
@@ -339,7 +550,7 @@ const DiseaseMap = () => {
             ))}
             
             {/* Markers */}
-            {filteredReports.map((report, idx) => {
+            {filteredReports.slice(0, 200).map((report, idx) => {
               const coords = report?.location?.coordinates || [];
               const lng = Number(coords[0]);
               const lat = Number(coords[1]);
@@ -384,13 +595,20 @@ const DiseaseMap = () => {
               );
             })}
             
+            {/* Show message if more markers are available */}
+            {filteredReports.length > 200 && (
+              <div className="map-info-overlay">
+                <p>{translations[currentLang].markersLimitMessage}</p>
+              </div>
+            )}
+            
             <MapController reports={filteredReports} />
           </MapContainer>
         </div>
 
         {/* Recent Reports Sidebar */}
         <div className="recent-reports">
-          <h3>Recent Reports</h3>
+          <h3>{translations[currentLang].recentReportsTitle}</h3>
           <div className="reports-list">
             {filteredReports.slice(0, 10).map((report) => (
               <div key={report._id} className="report-item">
@@ -403,6 +621,19 @@ const DiseaseMap = () => {
               </div>
             ))}
           </div>
+          
+          {/* Load More Button */}
+          {hasMoreData && (
+            <div className="load-more-container">
+              <button 
+                className="load-more-btn"
+                onClick={loadMoreReports}
+                disabled={loadingMore}
+              >
+                {loadingMore ? translations[currentLang].loadingMore : translations[currentLang].loadMoreBtn}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
