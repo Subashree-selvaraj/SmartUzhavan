@@ -425,16 +425,16 @@ const Home = () => {
               </motion.p>
             </div>
             <motion.div className="social-icons-advanced" variants={containerVariants} initial="hidden" whileInView="visible">
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Facebook">
+              <motion.a href="https://facebook.com" className="social-icon-advanced" variants={textVariants} aria-label="Facebook" target="_blank" rel="noopener noreferrer">
                 <FaFacebookF />
               </motion.a>
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Twitter">
+              <motion.a href="https://twitter.com" className="social-icon-advanced" variants={textVariants} aria-label="Twitter" target="_blank" rel="noopener noreferrer">
                 <FaTwitter />
               </motion.a>
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="Instagram">
+              <motion.a href="https://instagram.com" className="social-icon-advanced" variants={textVariants} aria-label="Instagram" target="_blank" rel="noopener noreferrer">
                 <FaInstagram />
               </motion.a>
-              <motion.a href="#" className="social-icon-advanced" variants={textVariants} aria-label="YouTube">
+              <motion.a href="https://youtube.com" className="social-icon-advanced" variants={textVariants} aria-label="YouTube" target="_blank" rel="noopener noreferrer">
                 <FaYoutube />
               </motion.a>
             </motion.div>
@@ -443,9 +443,9 @@ const Home = () => {
               <span className="divider">|</span>
               <Link to="/contact">{LANGUAGES[lang].contact}</Link>
               <span className="divider">|</span>
-              <a href="#">{LANGUAGES[lang].privacy}</a>
+              <button className="footer-link-btn" onClick={() => console.log('Privacy policy clicked')}>{LANGUAGES[lang].privacy}</button>
               <span className="divider">|</span>
-              <a href="#">{LANGUAGES[lang].terms}</a>
+              <button className="footer-link-btn" onClick={() => console.log('Terms clicked')}>{LANGUAGES[lang].terms}</button>
             </div>
             <div className="copyright-advanced">
               <p>{LANGUAGES[lang].copyright}</p>

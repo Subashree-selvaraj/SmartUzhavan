@@ -73,16 +73,25 @@ export function AuthProvider({ children }) {
 
   // Sign up with email and password
   function signup(email, password) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
   // Sign in with email and password
   function signin(email, password) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return signInWithEmailAndPassword(auth, email, password);
   }
 
   // Sign in with Google
   function signInWithGoogle() {
+    if (!auth || !googleProvider) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     googleProvider.setCustomParameters({
       prompt: 'select_account'
     });
@@ -91,6 +100,9 @@ export function AuthProvider({ children }) {
 
   // Phone authentication
   function setupRecaptcha(elementId) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return new RecaptchaVerifier(auth, elementId, {
       'size': 'normal',
       'callback': () => {
@@ -103,12 +115,18 @@ export function AuthProvider({ children }) {
   }
 
   function sendOTP(phoneNumber, recaptchaVerifier) {
+    if (!auth) {
+      return Promise.reject(new Error('Firebase authentication not initialized'));
+    }
     return signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
   }
 
   // Logout
   function logout() {
     localStorage.removeItem('user');
+    if (!auth) {
+      return Promise.resolve();
+    }
     return signOut(auth);
   }
 

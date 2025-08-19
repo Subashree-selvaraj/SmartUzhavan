@@ -239,9 +239,17 @@
     padding: 0.5rem;
 }
 
+/* hide mobile-only items by default (desktop/tablet) */
+.navbar-menu .mobile-only { display: none; }
+
 @media (max-width: 768px) {
     .navbar {
         padding: 0 1rem;
+    }
+
+    .navbar-container {
+        justify-content: space-between;
+        gap: 0.5rem;
     }
 
     .nav-right {
@@ -273,5 +281,10 @@
 
     .mobile-menu-icon {
         display: block;
+        margin-left: auto;
     }
+
+    /* show only phone-specific items if marked */
+    .navbar-menu .mobile-only { display: list-item; }
+    .account-section { display: none; }
 }
