@@ -15,6 +15,7 @@ const schemesRoutes = require('./routes/schemes');
 const predictRoutes = require('./routes/predict');
 const diseaseReportsRoutes = require('./routes/diseaseReports');
 const outbreakRoutes = require('./routes/outbreak');
+const alertsRoutes = require('./routes/alerts');
 
 const admin = require('firebase-admin');
 
@@ -254,6 +255,7 @@ app.use('/api/schemes', schemesRoutes);
 app.use('/api', predictRoutes);
 app.use('/api/diseaseReports', diseaseReportsRoutes);
 app.use('/api/outbreak', outbreakRoutes);
+app.use('/api/alerts', optionalFirebaseAuth, alertsRoutes);
 
 // SPA fallback: send index.html for non-API routes so client-side routing works
 app.get('*', (req, res, next) => {

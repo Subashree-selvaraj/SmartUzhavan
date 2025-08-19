@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import './Profile.css';
 
 const Profile = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, enableNotifications } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -14,6 +14,17 @@ const Profile = () => {
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const handleEnableNotifications = async () => {
+    try {
+      const result = await enableNotifications();
+      if (!result?.ok) {
+        console.warn('Notifications not enabled:', result?.reason || 'unknown');
+      }
+    } catch (e) {
+      console.error('Enable notifications error:', e);
     }
   };
 
@@ -80,6 +91,10 @@ const Profile = () => {
         </div>
 
         <div className="profile-actions">
+          <button className="btn" onClick={handleEnableNotifications}>
+            <i className="fas fa-bell"></i>
+            Enable Weather Notifications
+          </button>
           <button className="btn secondary" onClick={() => navigate('/')}>
             <i className="fas fa-home"></i>
             Back to Home

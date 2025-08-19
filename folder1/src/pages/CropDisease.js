@@ -243,7 +243,9 @@ const CropDiseaseDetectionChat = () => {
           imageUrl: detectionData.imageUrl,
           latitude,
           longitude,
-          reportedBy: currentUser?.uid || 'CropDisease Detection'
+          reportedBy: currentUser?.uid || 'CropDisease Detection',
+          reporterEmail: currentUser?.email || null,
+          reporterPhone: currentUser?.phoneNumber || null
         });
         appendMessage('bot', 'Detection shared successfully with the community!');
       }, async (error) => {
@@ -256,10 +258,12 @@ const CropDiseaseDetectionChat = () => {
           imageUrl: detectionData.imageUrl,
           latitude: 11.0168, // Default to Tamil Nadu center
           longitude: 76.9558,
-          reportedBy: currentUser?.uid || 'CropDisease Detection'
+          reportedBy: currentUser?.uid || 'CropDisease Detection',
+          reporterEmail: currentUser?.email || null,
+          reporterPhone: currentUser?.phoneNumber || null
         });
         appendMessage('bot', 'Detection shared successfully (location not available).');
-      });
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
       setShowShareModal(false);
     } catch (err) {
       appendMessage('bot', 'Failed to share detection. Please try again.');

@@ -24,13 +24,17 @@ const MapController = ({ reports, selectedRegion }) => {
   const map = useMap();
 
   useEffect(() => {
-    if (reports.length > 0) {
-      const bounds = L.latLngBounds(
-        reports.map(report => [
-          report.location.coordinates[1], // lat
-          report.location.coordinates[0]  // lng
-        ])
-      );
+    const positions = (reports || [])
+      .map(r => {
+        const coords = r?.location?.coordinates || [];
+        const lat = Number(coords[1]);
+        const lng = Number(coords[0]);
+        return { lat, lng };
+      })
+      .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && !(p.lat === 0 && p.lng === 0));
+
+    if (positions.length > 0) {
+      const bounds = L.latLngBounds(positions.map(p => [p.lat, p.lng]));
       map.fitBounds(bounds, { padding: [20, 20] });
     }
   }, [reports, map, selectedRegion]);
@@ -91,7 +95,23 @@ const DiseaseMap = () => {
 
     newSocket.on('newReport', (newReport) => {
       console.log('Received new disease report:', newReport);
-      setReports(prev => [newReport, ...prev]);
+      try {
+        const coords = newReport?.location?.coordinates || [];
+        const lng = parseFloat(coords[0]);
+        const lat = parseFloat(coords[1]);
+        const normalized = {
+          ...newReport,
+          severity: newReport?.severity || 'mild',
+          dateReported: newReport?.dateReported || new Date().toISOString(),
+          location: {
+            type: 'Point',
+            coordinates: [Number.isFinite(lng) ? lng : 0, Number.isFinite(lat) ? lat : 0]
+          }
+        };
+        setReports(prev => [normalized, ...prev]);
+      } catch (_) {
+        setReports(prev => [newReport, ...prev]);
+      }
     });
 
     socketRef.current = newSocket;
@@ -105,6 +125,10 @@ const DiseaseMap = () => {
   useEffect(() => {
     loadReports();
     loadHotspots();
+    const id = setInterval(() => {
+      loadReports();
+    }, 30000);
+    return () => clearInterval(id);
   }, []);
 
   const loadReports = async () => {
@@ -310,49 +334,56 @@ const DiseaseMap = () => {
                   fillOpacity: 0.25,
                   weight: 2
                 }}
-              >
-                <Popup>
-                  <div>
-                    <strong>Common disease:</strong> {h.diseaseName}<br/>
-                    Reports: {h.count} (last 14 days)
-                  </div>
-                </Popup>
-              </CircleMarker>
+                interactive={false}
+              />
             ))}
             
             {/* Markers */}
-            {filteredReports.map((report) => (
-              <Marker
-                key={report._id}
-                position={[
-                  report.location.coordinates[1], // lat
-                  report.location.coordinates[0]  // lng
-                ]}
-                icon={createPinIcon(report.severity)}
-              >
-                <Popup>
-                  <div className="marker-popup">
-                    <h4>{report.cropName}</h4>
-                    <p><strong>Disease:</strong> {report.diseaseName}</p>
-                    <p><strong>Severity:</strong> 
-                      <span className={`severity-badge ${report.severity}`}>
-                        {report.severity}
-                      </span>
-                    </p>
-                    <p><strong>Reported:</strong> {new Date(report.dateReported).toLocaleDateString()}</p>
-                    <p><strong>By:</strong> {report.farmerName || report.reportedBy || 'Anonymous'}</p>
-                    {report.imageUrl && (
-                      <img 
-                        src={report.imageUrl} 
-                        alt="Disease" 
-                        style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '5px' }}
-                      />
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+            {filteredReports.map((report, idx) => {
+              const coords = report?.location?.coordinates || [];
+              const lng = Number(coords[0]);
+              const lat = Number(coords[1]);
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
+              const reportedDate = report?.dateReported ? new Date(report.dateReported) : null;
+
+              return (
+                <Marker
+                  key={`${String(report._id || 'new')}-${lat}-${lng}-${idx}`}
+                  position={[lat, lng]}
+                  icon={createPinIcon(report.severity)}
+                  zIndexOffset={1000}
+                >
+                  <Popup>
+                    <div className="marker-popup">
+                      <h4>{report.cropName}</h4>
+                      <p><strong>Disease:</strong> {report.diseaseName}</p>
+                      <p><strong>Severity:</strong> 
+                        <span className={`severity-badge ${report.severity}`}>
+                          {report.severity}
+                        </span>
+                      </p>
+                      <p><strong>Reported:</strong> {reportedDate ? reportedDate.toLocaleDateString() : 'N/A'}</p>
+                      <p><strong>By:</strong> {report.farmerName || report.reportedBy || 'Anonymous'}</p>
+                      {report.reporterEmail && (
+                        <p><strong>Contact (Email):</strong> <a href={`mailto:${report.reporterEmail}`}>{report.reporterEmail}</a></p>
+                      )}
+                      {report.reporterPhone && (
+                        <p><strong>Contact (Phone):</strong> <a href={`tel:${report.reporterPhone}`}>{report.reporterPhone}</a></p>
+                      )}
+                      {report.imageUrl && (
+                        <img 
+                          src={report.imageUrl} 
+                          alt="Disease" 
+                          style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '5px' }}
+                        />
+                      )}
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+            
             <MapController reports={filteredReports} />
           </MapContainer>
         </div>

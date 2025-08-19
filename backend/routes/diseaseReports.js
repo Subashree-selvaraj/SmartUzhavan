@@ -27,7 +27,7 @@ async function computeDynamicSeverity({ diseaseName, latitude, longitude, days =
 // POST /api/diseaseReports - Save a new disease report
 router.post('/', async (req, res) => {
   try {
-    const { farmerName, cropName, diseaseName, severity, imageUrl, latitude, longitude, reportedBy } = req.body;
+    const { farmerName, cropName, diseaseName, severity, imageUrl, latitude, longitude, reportedBy, reporterEmail, reporterPhone } = req.body;
 
     // Validate required fields (severity can be omitted for auto-compute)
     if (!cropName || !diseaseName || latitude === undefined || longitude === undefined) {
@@ -55,7 +55,9 @@ router.post('/', async (req, res) => {
         type: 'Point',
         coordinates: [parseFloat(longitude), parseFloat(latitude)] // [lng, lat]
       },
-      reportedBy: reportedBy || 'anonymous'
+      reportedBy: reportedBy || 'anonymous',
+      reporterEmail: reporterEmail || null,
+      reporterPhone: reporterPhone || null
     });
 
     const savedReport = await diseaseReport.save();

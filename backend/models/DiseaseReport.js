@@ -12,7 +12,9 @@ const DiseaseReportSchema = new mongoose.Schema({
     coordinates: { type: [Number], required: true } // [lng, lat]
   },
   dateReported: { type: Date, default: Date.now },
-  reportedBy: { type: String, default: "anonymous" }
+  reportedBy: { type: String, default: "anonymous" },
+  reporterEmail: { type: String },
+  reporterPhone: { type: String }
 });
 
 DiseaseReportSchema.index({ location: "2dsphere" });
