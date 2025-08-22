@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -10,12 +11,13 @@ const MarketPrices = () => {
   // API Configuration
   const API_KEY =process.env.REACT_APP_MARKET_API_KEY;
   const BACKUP_API_KEY =process.env.REACT_APP_MARKET_BACKUP_API_KEY;
-  const API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
+  const API_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
 
   // State management
   const [allRecords, setAllRecords] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState('');
   const [useBackupKey, setUseBackupKey] = useState(false);
   const [currentDateRange, setCurrentDateRange] = useState(30);
@@ -93,7 +95,21 @@ const MarketPrices = () => {
       }
 
       const data = await response.json();
-      console.log(data); // <-- Add this
+      
+      // Log the first record to see all available fields
+      if (data.records && data.records.length > 0) {
+        console.log('=== API DATA STRUCTURE ANALYSIS ===');
+        console.log('First record from API:', data.records[0]);
+        console.log('All available fields:', Object.keys(data.records[0]));
+        console.log('Total records:', data.records.length);
+        console.log('Sample dates range:');
+        const dates = data.records.slice(0, 10).map(r => r.arrival_date);
+        console.log('Sample arrival dates:', dates);
+        console.log('=== END ANALYSIS ===');
+        
+
+      }
+      
       const processedRecords = (data.records || []).map(apiRecord => ({
         state: apiRecord.state ? apiRecord.state.trim() : '',
         district: apiRecord.district ? apiRecord.district.trim() : '',
@@ -121,6 +137,10 @@ const MarketPrices = () => {
     }
   };
 
+
+
+
+
   // Get unique values for dropdowns
   const getUniqueStates = () => {
     return [...new Set(allRecords.map(record => record.state))].filter(Boolean).sort();
@@ -141,44 +161,98 @@ const MarketPrices = () => {
     return [...new Set(filtered.map(record => record.commodity))].filter(Boolean).sort();
   };
 
-  // Fetch market trends
-  const fetchMarketTrends = () => {
+  // Fetch market trends based on selected date range
+  const fetchMarketTrends = async () => {
     if (!selectedState || !selectedCommodity) {
       showError("Please select both State and Crop to view market trends.");
       return;
     }
 
-    setLoading(true);
+    setDataLoading(true);
     setError('');
 
     try {
-      let records = allRecords;
+      // Calculate date range for API query
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - currentDateRange);
 
-      if (selectedState) {
-        records = records.filter(r => r.state === selectedState);
-      }
-      if (selectedCommodity) {
-        records = records.filter(r => r.commodity === selectedCommodity);
-      }
+      // Format dates for API (DD/MM/YYYY format)
+      const formatDateForAPI = (date) => {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
+
+      const startDateStr = formatDateForAPI(startDate);
+      const endDateStr = formatDateForAPI(endDate);
+
+      // Fetch data from API with date range filter
+      const currentApiKey = useBackupKey ? BACKUP_API_KEY : API_KEY;
+      const params = new URLSearchParams({
+        "api-key": currentApiKey,
+        format: "json",
+        limit: 10000,
+        "filters[arrival_date]": `${startDateStr},${endDateStr}`,
+        "filters[state]": selectedState,
+        "filters[commodity]": selectedCommodity
+      });
+
       if (selectedCity) {
-        records = records.filter(r => r.market === selectedCity);
+        params.append("filters[market]", selectedCity);
       }
 
-      const validRecords = records.filter(validateRecord);
+      const url = `${API_URL}?${params.toString()}`;
+      const response = await fetch(url);
 
-      if (validRecords.length === 0) {
-        showError("No price data found for the selected filters. Try selecting a different state or crop.");
+      if (!response.ok) {
+        if (response.status === 401 && !useBackupKey) {
+          setUseBackupKey(true);
+          return fetchMarketTrends();
+        }
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const apiRecords = data.records || [];
+
+      // Process and filter the API records
+      const processedRecords = apiRecords
+        .map(apiRecord => ({
+          state: apiRecord.state ? apiRecord.state.trim() : '',
+          district: apiRecord.district ? apiRecord.district.trim() : '',
+          market: apiRecord.market ? apiRecord.market.trim() : '',
+          commodity: apiRecord.commodity ? apiRecord.commodity.trim() : '',
+          variety: apiRecord.variety ? apiRecord.variety.trim() : '',
+          grade: apiRecord.grade ? apiRecord.grade.trim() : '',
+          arrival_date: apiRecord.arrival_date ? apiRecord.arrival_date.trim() : '',
+          min_price: apiRecord.min_price ? apiRecord.min_price.trim() : '',
+          max_price: apiRecord.max_price ? apiRecord.max_price.trim() : '',
+          modal_price: apiRecord.modal_price ? apiRecord.modal_price.trim() : '',
+        }))
+        .filter(validateRecord);
+
+      if (processedRecords.length === 0) {
+        showError(`No price data found for ${selectedCommodity} in ${selectedState} for the last ${currentDateRange} days. Try selecting a different state, crop, or date range.`);
+        setFilteredRecords([]);
+        setChartData(null);
+        setTableData([]);
+        setCurrentPrice(null);
+        setPriceChange(null);
+        setSummaryData({});
+        setInsights({});
         return;
       }
 
-      setFilteredRecords(validRecords);
-      processAndDisplayData(validRecords);
+      setFilteredRecords(processedRecords);
+      processAndDisplayData(processedRecords);
 
     } catch (error) {
       console.error('Error fetching market trends:', error);
       showError("Unable to fetch market data. Please try again later.");
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -286,35 +360,63 @@ const MarketPrices = () => {
     });
   };
 
-  // Generate market insights
-  const generateMarketInsights = (records) => {
-    if (records.length < 2) {
-      setInsights({
-        bestTime: 'Not enough data for insights.',
-        volatility: 'Not enough data for insights.',
-        prediction: 'Not enough data for insights.'
-      });
-      return;
+  // Generate market insights using computeInsights logic
+  const computeInsights = (records) => {
+    if (!records || records.length < 5) {
+      return {
+        bestTime: "Not enough data for insights.",
+        volatility: "Not enough data for insights.",
+        prediction: "Not enough data for insights."
+      };
     }
 
-    const prices = records.map(r => parseFloat(r.modal_price) || 0);
-    const maxPrice = Math.max(...prices);
-    const maxPriceIndex = prices.indexOf(maxPrice);
-    const maxPriceDate = formatDate(records[maxPriceIndex].arrival_date);
+    // Sort records by date
+    const sorted = [...records].sort(
+      (a, b) => new Date(a.arrival_date) - new Date(b.arrival_date)
+    );
 
-    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-    const variance = prices.reduce((acc, price) => acc + Math.pow(price - avgPrice, 2), 0) / prices.length;
-    const volatilityVal = Math.sqrt(variance);
-    const volatilityPercent = avgPrice ? ((volatilityVal / avgPrice) * 100).toFixed(1) : 0;
+    // Use only records with numerical modal_price
+    const valid = sorted.filter(r => !isNaN(parseFloat(r.modal_price)));
+    const prices = valid.map(r => parseFloat(r.modal_price));
 
-    const recentTrend = prices[prices.length - 1] - prices[0];
-    const predictionVal = prices[prices.length - 1] + (recentTrend / prices.length);
+    // Best selling time = day with highest modal_price
+    let bestTime = "Not enough data for insights.";
+    if (valid.length > 0) {
+      const idx = prices.indexOf(Math.max(...prices));
+      bestTime = `Best price was on ${formatDate(valid[idx].arrival_date)} (₹${prices[idx]} per Quintal)`;
+    }
 
-    setInsights({
-      bestTime: `Best price was on ${maxPriceDate} (₹${maxPrice} per Quintal)`,
-      volatility: `Price varies by ${volatilityPercent}% (±₹${volatilityVal.toFixed(0)} per Quintal)`,
-      prediction: `Next price likely around ₹${predictionVal.toFixed(0)} per Quintal based on recent trend.`
-    });
+    // Price volatility = Standard deviation
+    let volatility = "Not enough data for insights.";
+    if (prices.length > 1) {
+      const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+      const variance = prices.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / prices.length;
+      const stdDev = Math.sqrt(variance);
+      const volatilityPercent = avg ? ((stdDev / avg) * 100).toFixed(1) : 0;
+      volatility = `Price varies by ${volatilityPercent}% (±₹${stdDev.toFixed(0)} per Quintal)`;
+    }
+
+    // Price prediction = Linear regression for next day
+    let prediction = "Not enough data for insights.";
+    if (prices.length > 2) {
+      const N = prices.length;
+      const x = Array.from({ length: N }, (v, i) => i);
+      const y = prices;
+      const sumX = x.reduce((a, b) => a + b, 0);
+      const sumY = y.reduce((a, b) => a + b, 0);
+      const sumXY = x.map((xi, i) => xi * y[i]).reduce((a, b) => a + b, 0);
+      const sumXX = x.map(xi => xi * xi).reduce((a, b) => a + b, 0);
+      const slope = (N * sumXY - sumX * sumY) / (N * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / N;
+      const nextVal = slope * N + intercept;
+      prediction = `Next price likely around ₹${nextVal.toFixed(0)} per Quintal based on recent trend.`;
+    }
+
+    return { bestTime, volatility, prediction };
+  };
+
+  const generateMarketInsights = (records) => {
+    setInsights(computeInsights(records));
   };
 
   // Chart options
@@ -340,18 +442,12 @@ const MarketPrices = () => {
     }
   };
 
-  // Update chart by date range
+  // Update chart by date range - fetch new data from API
   const updateChartByDateRange = (days) => {
     setCurrentDateRange(days);
-    if (filteredRecords.length > 0) {
-      const sortedRecords = filteredRecords
-        .filter(validateRecord)
-        .sort((a, b) => new Date(a.arrival_date) - new Date(b.arrival_date));
-      
-      const recentRecords = sortedRecords.slice(-days);
-      if (recentRecords.length > 0) {
-        createPriceChart(recentRecords);
-      }
+    // If we have selected state and commodity, fetch new data for the updated date range
+    if (selectedState && selectedCommodity) {
+      fetchMarketTrends();
     }
   };
 
@@ -368,7 +464,9 @@ const MarketPrices = () => {
 
   if (loading && allRecords.length === 0) {
     return (
-      <div className="market-prices-container">
+      <div
+        className="market-prices-container" style={{ backgroundColor: "#f0f0f0" }}
+      >
         <div className="loading-container">
           <div className="spinner"></div>
           <p>Loading market data...</p>
@@ -378,12 +476,14 @@ const MarketPrices = () => {
   }
 
   return (
-    <div className="market-prices-container">
+    <div className="market-prices-container" style={{ backgroundColor: "#f0f0f0" }}>
       {/* Page Header */}
       <div className="page-header">
-        <h1>🌾 Farmer's Mandi Price Dashboard</h1>
-        <p>Track market trends and make informed selling decisions</p>
+        <h1 style={{ color: "white" }}>🌾 Farmer's Mandi Price Dashboard</h1>
+        <p style={{ color: "white" }}>Track market trends and make informed selling decisions</p>
       </div>
+
+
 
       {/* Filters Section */}
       <section className="filters">
@@ -434,7 +534,7 @@ const MarketPrices = () => {
           <select 
             id="dateRange"
             value={currentDateRange}
-            onChange={(e) => setCurrentDateRange(parseInt(e.target.value))}
+            onChange={(e) => updateChartByDateRange(parseInt(e.target.value))}
           >
             <option value="7">Last 7 Days</option>
             <option value="15">Last 15 Days</option>
@@ -443,8 +543,8 @@ const MarketPrices = () => {
           </select>
         </div>
 
-        <button onClick={fetchMarketTrends}>
-          📊 Get Market Trends
+        <button onClick={fetchMarketTrends} disabled={dataLoading}>
+          {dataLoading ? '🔄 Fetching Data...' : '📊 Get Market Trends'}
         </button>
       </section>
 
@@ -453,6 +553,13 @@ const MarketPrices = () => {
         <div className="loading-container">
           <div className="spinner"></div>
           <p>Loading market data...</p>
+        </div>
+      )}
+
+      {dataLoading && (
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Fetching price data for the last {currentDateRange} days...</p>
         </div>
       )}
 
@@ -532,28 +639,32 @@ const MarketPrices = () => {
             </div>
             <div className="chart-controls">
               <button 
-                className={`chart-btn ${currentDateRange === 7 ? 'active' : ''}`}
+                className={`chart-btn ${currentDateRange === 7 ? 'active' : ''} ${dataLoading ? 'disabled' : ''}`}
                 onClick={() => updateChartByDateRange(7)}
+                disabled={dataLoading}
               >
-                7 Days
+                {dataLoading && currentDateRange === 7 ? 'Loading...' : '7 Days'}
               </button>
               <button 
-                className={`chart-btn ${currentDateRange === 15 ? 'active' : ''}`}
+                className={`chart-btn ${currentDateRange === 15 ? 'active' : ''} ${dataLoading ? 'disabled' : ''}`}
                 onClick={() => updateChartByDateRange(15)}
+                disabled={dataLoading}
               >
-                15 Days
+                {dataLoading && currentDateRange === 15 ? 'Loading...' : '15 Days'}
               </button>
               <button 
-                className={`chart-btn ${currentDateRange === 30 ? 'active' : ''}`}
+                className={`chart-btn ${currentDateRange === 30 ? 'active' : ''} ${dataLoading ? 'disabled' : ''}`}
                 onClick={() => updateChartByDateRange(30)}
+                disabled={dataLoading}
               >
-                30 Days
+                {dataLoading && currentDateRange === 30 ? 'Loading...' : '30 Days'}
               </button>
               <button 
-                className={`chart-btn ${currentDateRange === 90 ? 'active' : ''}`}
+                className={`chart-btn ${currentDateRange === 90 ? 'active' : ''} ${dataLoading ? 'disabled' : ''}`}
                 onClick={() => updateChartByDateRange(90)}
+                disabled={dataLoading}
               >
-                3 Months
+                {dataLoading && currentDateRange === 90 ? 'Loading...' : '3 Months'}
               </button>
             </div>
           </section>

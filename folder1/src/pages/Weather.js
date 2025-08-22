@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import './Weather.css';
+import { useAuth } from '../context/AuthContext';
 
 const WEATHER_API_KEY = process.env.REACT_APP_WEATHER_API_KEY;
 const BACKUP_KEY = process.env.REACT_APP_WEATHER_BACKUP_KEY;
+const API_BASE = (process.env.REACT_APP_API_BASE || 'http://localhost:5000/api');
 
 const DEFAULT_LOCATION = 'Chennai, Tamil Nadu';
 
@@ -75,6 +77,7 @@ function WeatherPage() {
   const [crisis, setCrisis] = useState([]);
   const [measures, setMeasures] = useState([]);
   const [useBackupKey, setUseBackupKey] = useState(false);
+  const { enableNotifications } = useAuth();
 
   useEffect(() => {
     // Load Chennai weather immediately
@@ -163,6 +166,11 @@ function WeatherPage() {
     setWeather(data);
     generateRecommendations(data);
     generateWeeklyForecast(data);
+    try {
+      checkAndDispatchHighRiskAlert(data);
+    } catch (e) {
+      console.warn('High risk alert dispatch skipped:', e?.message || e);
+    }
     
     // Cache weather data
     try {
@@ -174,6 +182,77 @@ function WeatherPage() {
       console.error('Failed to cache weather data:', e);
     }
   };
+
+  function buildPrecautionsFromState() {
+    const items = [];
+    crisis.forEach(c => items.push(`${c.title}: ${c.content}`));
+    measures.forEach(m => items.push(`${m.title}: ${m.content}`));
+    return items.slice(0, 8);
+  }
+
+  function detectHighRisk(data) {
+    try {
+      const temp = data?.main?.temp || 0;
+      const humidity = data?.main?.humidity || 0;
+      const wind = data?.wind?.speed || 0;
+      const cond = (data?.weather?.[0]?.main || '').toLowerCase();
+
+      const isHeat = temp >= 38;
+      const isCold = temp <= 10;
+      const isStorm = cond.includes('thunder') || wind > 12; // ~43 km/h
+      const isHeavyRain = cond.includes('rain') && (data?.rain?.['1h'] || data?.rain?.['3h'] || 0) >= 10;
+      const isHighHumidity = humidity >= 85;
+
+      const triggered = [];
+      if (isHeat) triggered.push('Heat wave');
+      if (isCold) triggered.push('Cold stress');
+      if (isStorm) triggered.push('Storm risk');
+      if (isHeavyRain) triggered.push('Heavy rainfall');
+      if (isHighHumidity) triggered.push('High humidity');
+
+      return { isHighRisk: triggered.length > 0, risks: triggered };
+    } catch (_) {
+      return { isHighRisk: false, risks: [] };
+    }
+  }
+
+  async function checkAndDispatchHighRiskAlert(data) {
+    const detection = detectHighRisk(data);
+    if (!detection.isHighRisk) return;
+
+    const place = `${data?.name || 'Your area'}${data?.sys?.country ? ', ' + data.sys.country : ''}`;
+    const risks = detection.risks.join(', ');
+    const tips = buildPrecautionsFromState();
+
+    const message = `High-risk weather in ${place}: ${risks}. Precautions: ${tips.join('; ')}`;
+
+    try {
+      const idToken = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).uid : null;
+      const authHeader = await buildAuthHeader();
+      await fetch(`${API_BASE}/alerts/weather`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader || {})
+        },
+        body: JSON.stringify({ message, city: data?.name || 'Unknown' })
+      });
+    } catch (e) {
+      console.error('Failed to dispatch high-risk alert:', e);
+    }
+  }
+
+  async function buildAuthHeader() {
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      if (auth?.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        return { Authorization: `Bearer ${token}` };
+      }
+    } catch (_) {}
+    return null;
+  }
 
   const generateRecommendations = (data) => {
     const recs = [];
@@ -264,7 +343,7 @@ function WeatherPage() {
 
   const generateWeeklyForecast = (currentData) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const weatherTypes = ['clear', 'clouds', 'rain', 'thunderstorm', 'drizzle'];
+    // const weatherTypes = ['clear', 'clouds', 'rain', 'thunderstorm', 'drizzle']; // reserved for future weather variations
     const currentTemp = currentData.main.temp;
     const currentWeather = currentData.weather[0].main.toLowerCase();
 
@@ -413,8 +492,27 @@ function WeatherPage() {
     <div className="weather-page">
       {/* Page Header */}
       <div className="page-header">
-        <h1>{t('weatherDetails')}</h1>
-        <p>{t('weatherDetailsDesc')}</p>
+        <div className="header-content">
+          <div>
+            <h1>🌤️ {t('weatherDetails')}</h1>
+            <p>{t('weatherDetailsDesc')}</p>
+          </div>
+          <div>
+            <button
+              className="enable-alerts-btn"
+              onClick={async () => {
+                const res = await enableNotifications();
+                if (res?.ok) {
+                  alert('Weather alerts enabled!');
+                } else {
+                  alert('Failed to enable alerts: ' + (res?.reason || 'unknown'));
+                }
+              }}
+            >
+              🔔 Enable Weather Alerts
+            </button>
+          </div>
+        </div>
         
         {/* Language Toggle */}
         <div style={{ marginTop: '1rem' }}>

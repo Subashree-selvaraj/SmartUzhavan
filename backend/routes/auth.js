@@ -146,4 +146,18 @@ router.post('/send-otp', async (req, res) => {
     }
 });
 
+// Helper: upsert Firestore user record if admin available
+async function upsertUserDocIfAvailable(uid, data) {
+	try {
+		const admin = require('firebase-admin');
+		if (!admin.apps.length || !admin.firestore) return;
+		const db = admin.firestore();
+		await db.collection('users').doc(uid).set({
+			uid,
+			...data,
+			updatedAt: new Date()
+		}, { merge: true });
+	} catch (_) {}
+}
+
 module.exports = router; 

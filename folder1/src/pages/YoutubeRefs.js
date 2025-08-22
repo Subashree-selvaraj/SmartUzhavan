@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Constants (replace with your API key)
-const YT_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY;
+// Constants
+const YT_API_KEY = process.env.REACT_APP_YOUTUBE_API_KEY || 'AIzaSyCdRbcIruKFZa0yHZxd00YYEUEeyCeIwlw';
 const YT_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
+
+// Debug API key
+console.log('YouTube API Key:', YT_API_KEY);
 
 const DEFAULT_QUERY_TA = 'விவசாயம் விவசாயி Tamil farming';
 const DEFAULT_QUERY_EN = 'farming agriculture';
@@ -164,7 +167,7 @@ export default function YouTubeRefs() {
         body { font-family: 'Poppins', sans-serif; background: #f5f5f5; margin: 0; }
         .yt-header {
           display: flex;
-          justify-content: space-between;
+          justify-content: center;
           align-items: center;
           padding: 1rem 2rem;
           background: #fff;
@@ -173,22 +176,76 @@ export default function YouTubeRefs() {
         .yt-title {
           font-size: 1.5rem;
           font-weight: 600;
+          text-align: center;
         }
         .lang-switcher {
           position: relative;
+          display: flex;
+          align-items: center;
         }
         .lang-btn {
-          background: none;
+          background: #4CAF50;
+          color: white;
           border: none;
+          padding: 0.7rem 1.5rem;
+          border-radius: 25px;
           font-size: 1rem;
           cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          white-space: nowrap;
+        }
+        .lang-btn:hover {
+          background: #45a049;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .lang-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: #fff;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+          border-radius: 8px;
+          z-index: 1000;
+          min-width: 150px;
+          margin-top: 0.5rem;
+        }
+        .lang-dropdown button {
+          width: 100%;
+          padding: 0.8rem 1rem;
+          border: none;
+          background: #4CAF50;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.2s ease;
+          border-radius: 0;
+        }
+        .lang-dropdown button:first-child {
+          border-radius: 8px 8px 0 0;
+        }
+        .lang-dropdown button:last-child {
+          border-radius: 0 0 8px 8px;
+        }
+        .lang-dropdown button:hover {
+          background: #f5f5f5;
+          color:#4CAF50;
         }
         .yt-search-bar {
           display: flex;
-          gap: 1rem;
-          margin: 2rem auto 1rem auto;
-          max-width: 700px;
+          gap: 1.5rem;
+          margin: 1rem auto 1rem auto;
+          max-width: 800px;
           padding: 0 1rem;
+          align-items: center;
+          justify-content: center;
+        }
+        .search-input-group {
+          display: flex;
+          gap: 1rem;
+          flex: 1;
+          max-width: 500px;
+          align-items: center;
         }
         .yt-search-bar input {
           flex: 1;
@@ -271,6 +328,17 @@ export default function YouTubeRefs() {
             gap: 0.5rem;
             padding: 1rem;
           }
+          .yt-search-bar {
+            gap: 1rem;
+          }
+          .search-input-group {
+            max-width: 100%;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .lang-switcher {
+            margin-top: 0.5rem;
+          }
           .yt-grid {
             grid-template-columns: 1fr;
           }
@@ -281,6 +349,27 @@ export default function YouTubeRefs() {
         <div className="yt-title" data-lang="ytTitle">
           {translations[currentLang].ytTitle}
         </div>
+      </div>
+
+      <div className="yt-search-bar">
+        <div className="search-input-group">
+          <input
+            id="yt-search-input"
+            type="text"
+            placeholder={translations[currentLang].searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearch();
+            }}
+            aria-label="Search input"
+          />
+          <button id="yt-search-btn" onClick={handleSearch} type="button">
+            {translations[currentLang].searchBtn}
+          </button>
+        </div>
+        
+        {/* Language Switcher - Now positioned next to search bar */}
         <div className="lang-switcher">
           <button
             className="lang-btn"
@@ -297,15 +386,7 @@ export default function YouTubeRefs() {
             <div
               id="lang-dropdown"
               ref={langDropdownRef}
-              style={{
-                display: 'block',
-                position: 'absolute',
-                right: 0,
-                background: '#fff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                borderRadius: 6,
-                zIndex: 10,
-              }}
+              className="lang-dropdown"
               role="menu"
             >
               <button
@@ -329,23 +410,6 @@ export default function YouTubeRefs() {
             </div>
           )}
         </div>
-      </div>
-
-      <div className="yt-search-bar">
-        <input
-          id="yt-search-input"
-          type="text"
-          placeholder={translations[currentLang].searchPlaceholder}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSearch();
-          }}
-          aria-label="Search input"
-        />
-        <button id="yt-search-btn" onClick={handleSearch} type="button">
-          {translations[currentLang].searchBtn}
-        </button>
       </div>
 
       <div className="yt-tags" id="yt-tags" role="list">

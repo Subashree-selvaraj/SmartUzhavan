@@ -153,12 +153,12 @@ Respond in clear, friendly, helpful tone. Keep each section labeled clearly.
         const expertRes = await axios.post(
           'https://openrouter.ai/api/v1/chat/completions',
           {
-            model: 'openai/gpt-4o',
+            model: 'openai/gpt-4.1-nano',
             messages: [
               { role: 'system', content: 'You are an expert agricultural advisor for Indian farmers.' },
               { role: 'user', content: expertPrompt }
             ],
-            max_tokens: 600,
+            max_tokens: 250,
             temperature: 0.7
           },
           {

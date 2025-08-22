@@ -7,46 +7,120 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const http = require('http');
+const socketIo = require('socket.io');
 
 const authRoutes = require('./routes/auth');
 const schemesRoutes = require('./routes/schemes');
 const predictRoutes = require('./routes/predict');
+const diseaseReportsRoutes = require('./routes/diseaseReports');
+const outbreakRoutes = require('./routes/outbreak');
+const alertsRoutes = require('./routes/alerts');
 
 const admin = require('firebase-admin');
 
 const app = express();
+const server = http.createServer(app);
+
+// Helpers: allowed origins resolution with wildcard support
+const getAllowedOrigins = () => {
+  const envOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean) || [];
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://0.0.0.0:3000',
+    'http://localhost:3001'
+  ];
+  return envOrigins.length > 0 ? envOrigins : defaultOrigins;
+};
+
+const normalize = (value) => String(value || '').trim().replace(/\/$/, '').toLowerCase();
+const getHost = (value) => {
+  try { return new URL(value).host.toLowerCase(); } catch { return normalize(value).replace(/^https?:\/\//, ''); }
+};
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // non-browser or same-origin
+  const allowed = getAllowedOrigins();
+  const originNorm = normalize(origin);
+  const originHost = getHost(origin);
+  return allowed.some((pattern) => {
+    const patNorm = normalize(pattern);
+    if (!patNorm) return false;
+    // Wildcard subdomain support: *.example.com
+    if (patNorm.startsWith('*.')) {
+      const suffix = patNorm.slice(1); // .example.com
+      return originHost.endsWith(suffix.replace(/^\./, ''));
+    }
+    // Exact origin match (with protocol)
+    if (patNorm.startsWith('http://') || patNorm.startsWith('https://')) {
+      return originNorm === patNorm;
+    }
+    // Hostname match
+    return originHost === patNorm;
+  });
+};
+
+const io = socketIo(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST']
+  }
+});
+
+// Attach io to app for use in routes
+app.set('io', io);
+
 const PORT = process.env.PORT || 5000;
 
 // MongoDB Connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/agriconnect';
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+mongoose.connect(mongoUri)
+.then(() => {
+  console.log('Connected to MongoDB');
+  // Start weekly scheduler after DB connection
+  const { startScheduler } = require('./scheduler');
+  startScheduler();
 })
-.then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Initialize Firebase Admin SDK (using service account info from env variables)
 try {
   if (!admin.apps.length) {
-    const serviceAccount = {
-      type: "service_account",
-      project_id: "project-kissan-48284",
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
+    const requiredFirebaseEnv = {
+      privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      clientId: process.env.FIREBASE_CLIENT_ID
     };
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: "project-kissan-48284"
-    });
+    const hasAllCreds = Object.values(requiredFirebaseEnv).every(v => typeof v === 'string' && v.trim().length > 0);
 
-    console.log('Firebase Admin initialized successfully');
+    if (hasAllCreds) {
+      const serviceAccount = {
+        type: 'service_account',
+        project_id: 'project-kissan-48284',
+        private_key_id: requiredFirebaseEnv.privateKeyId,
+        private_key: requiredFirebaseEnv.privateKey,
+        client_email: requiredFirebaseEnv.clientEmail,
+        client_id: requiredFirebaseEnv.clientId,
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs'
+      };
+
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: 'project-kissan-48284'
+      });
+
+      console.log('Firebase Admin initialized successfully');
+    } else {
+      console.warn('Firebase Admin not configured. Skipping Firebase initialization.');
+    }
   }
 } catch (error) {
   console.error('Firebase Admin initialization error:', error.message);
@@ -54,12 +128,10 @@ try {
 
 // CORS configuration - ONLY ONCE before any routes/middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://0.0.0.0:3000',
-    'http://localhost:3001'
-  ],
+  origin: function (origin, callback) {
+    if (isOriginAllowed(origin)) return callback(null, true);
+    return callback(new Error('CORS not allowed'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
@@ -67,7 +139,9 @@ app.use(cors({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '../Frontend')));
+// Serve React build assets
+const buildPath = path.join(__dirname, '../folder1/build');
+app.use(express.static(buildPath));
 
 // Firebase authentication middleware: required auth
 const verifyFirebaseToken = async (req, res, next) => {
@@ -75,6 +149,10 @@ const verifyFirebaseToken = async (req, res, next) => {
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No authorization token provided' });
+  }
+
+  if (!admin.apps.length) {
+    return res.status(503).json({ error: 'Auth service unavailable' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -91,7 +169,7 @@ const verifyFirebaseToken = async (req, res, next) => {
 // Firebase authentication middleware: optional auth
 const optionalFirebaseAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ') && admin.apps.length) {
     const token = authHeader.split(' ')[1];
     try {
       const decodedToken = await admin.auth().verifyIdToken(token);
@@ -103,12 +181,6 @@ const optionalFirebaseAuth = async (req, res, next) => {
   }
   next();
 };
-
-// Serve React app from folder1/build if it exists
-const reactBuildPath = path.join(__dirname, '../folder1/build');
-if (fs.existsSync(reactBuildPath)) {
-  app.use('/app', express.static(reactBuildPath));
-}
 
 // Mock data storage
 let mockData = {
@@ -181,10 +253,19 @@ function generateDistrictData(crop) {
 app.use('/api/auth', authRoutes);
 app.use('/api/schemes', schemesRoutes);
 app.use('/api', predictRoutes);
+app.use('/api/diseaseReports', diseaseReportsRoutes);
+app.use('/api/outbreak', outbreakRoutes);
+app.use('/api/alerts', optionalFirebaseAuth, alertsRoutes);
 
-// Serve frontend root
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../Frontend/index.html'));
+// SPA fallback: send index.html for non-API routes so client-side routing works
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  return res.sendFile(path.join(buildPath, 'index.html'));
+});
+
+// Health check route for Render
+app.get('/healthz', (req, res) => {
+  res.status(200).send('ok');
 });
 
 app.get('/api/prices', (req, res) => {
@@ -353,7 +434,16 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

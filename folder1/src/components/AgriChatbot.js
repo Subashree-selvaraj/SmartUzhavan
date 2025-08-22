@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './AgriChatbot.css';
 
+const API_BASE_URL = (process.env.REACT_APP_API_BASE || 'http://localhost:5000/api');
+
 const AgriChatbot = () => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -8,17 +10,61 @@ const AgriChatbot = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('auto');
   const [isRecording, setIsRecording] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentSpeakingId, setCurrentSpeakingId] = useState(null);
-  const [currentAudio, setCurrentAudio] = useState(null);
+  // const [isSpeaking, setIsSpeaking] = useState(false); // reserved for TTS features
+  // const [currentSpeakingId, setCurrentSpeakingId] = useState(null); // reserved for TTS features
+  // const [currentAudio, setCurrentAudio] = useState(null); // reserved for TTS features
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const API_BASE_URL = 'http://localhost:5000/api';
+  const GEMINI_API_KEY = 'AIzaSyDThNYvkIr1X0cwjMKtkIO5tXRsxxVAAN4';
+  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
   const SESSION_ID = 'chatbot_session_' + Date.now();
+
+  // Function to call Gemini API directly
+  const callGeminiAPI = async (prompt, imageData = null) => {
+    try {
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ]
+      };
+
+      // Add image if provided
+      if (imageData) {
+        requestBody.contents[0].parts.push({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: imageData
+          }
+        });
+      }
+
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I couldn\'t generate a response.';
+    } catch (error) {
+      console.error('Gemini API Error:', error);
+      throw error;
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,18 +75,15 @@ const AgriChatbot = () => {
   }, [messages]);
 
   useEffect(() => {
-    // Add welcome message on component mount
     if (messages.length === 0) {
       addWelcomeMessage();
     }
-
     // Load speech synthesis voices
     if ('speechSynthesis' in window) {
       speechSynthesis.getVoices();
       if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => {
-          const voices = speechSynthesis.getVoices();
-          console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+          speechSynthesis.getVoices();
         };
       }
     }
@@ -66,11 +109,101 @@ How can I assist you today?`,
     setMessages([welcomeMessage]);
   };
 
-  const detectLanguage = (text) => {
-    const tamilRegex = /[\u0B80-\u0BFF]/;
-    return tamilRegex.test(text) ? 'ta' : 'en';
+  // Azure TTS logic (like expert-sug.js)
+  let currentAudioRef = useRef(null);
+
+  const playAzureTTS = async (text, lang = 'en-US') => {
+    try {
+      if (currentAudioRef.current && !currentAudioRef.current.paused) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        currentAudioRef.current = null;
+        return;
+      }
+      const response = await fetch(`${API_BASE_URL}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language: lang })
+      });
+      if (!response.ok) throw new Error('TTS failed');
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+      audio.play();
+      audio.onended = () => {
+        currentAudioRef.current = null;
+      };
+    } catch (e) {
+      alert('Could not play voice output.');
+    }
   };
 
+  const speakText = (text) => {
+    let lang = 'en-US';
+    if (currentLanguage === 'ta') lang = 'ta-IN';
+    playAzureTTS(text, lang);
+  };
+
+  // ----------------------
+  // QUICK ADVICE HANDLER
+  // ----------------------
+  const getQuickAdvice = async (topic) => {
+    let prompt = "";
+    switch (topic) {
+      case 'weather':
+        prompt = "Give the latest practical weather-related farming tips for Tamil Nadu farmers. Focus on current (August) climate conditions and actionable advice.";
+        break;
+      case 'crops':
+        prompt = "Provide key crop cultivation tips for the current season (August) in Tamil Nadu, including what to sow and best practices.";
+        break;
+      case 'pests':
+        prompt = "What are the most common pest problems this month (August) in Tamil Nadu? Give practical control strategies and advice for local farmers.";
+        break;
+      case 'schemes':
+        prompt = "List the ongoing major government schemes or subsidies available to Tamil Nadu farmers right now, with brief practical descriptions.";
+        break;
+      default:
+        prompt = "Give general agricultural advice for Tamil Nadu farmers.";
+    }
+
+    setIsLoading(true);
+    // Add typing message
+    const typingMessage = {
+      id: Date.now() + 1,
+      content: 'Thinking...',
+      sender: 'bot',
+      isTyping: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, typingMessage]);
+
+    try {
+      const isTamil = currentLanguage === 'ta';
+      if (isTamil) prompt = prompt + " Answer in Tamil.";
+      const response = await callGeminiAPI(prompt);
+      setMessages(prev => prev.filter(msg => !msg.isTyping));
+      const botMessage = {
+        id: Date.now() + 2,
+        content: response,
+        sender: 'bot',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (err) {
+      setMessages(prev => prev.filter(msg => !msg.isTyping));
+      setMessages(prev => [...prev, {
+        id: Date.now() + 2,
+        content: 'Sorry, something went wrong fetching quick advice.',
+        sender: 'bot',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle message sending
   const handleSendMessage = async () => {
     if (!inputValue.trim() && !selectedImage) return;
 
@@ -89,8 +222,11 @@ How can I assist you today?`,
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    setSelectedImage(null);
     setIsLoading(true);
+
+    // Store selectedImage before clearing it
+    const imageToAnalyze = selectedImage;
+    setSelectedImage(null);
 
     // Add typing indicator
     const typingMessage = {
@@ -103,85 +239,142 @@ How can I assist you today?`,
     setMessages(prev => [...prev, typingMessage]);
 
     try {
-      // Handle simple greetings and thanks
-      const userLower = userMessageContent.toLowerCase().trim();
-      const greetings = ["hello", "hi", "hey", "hai", "vanakkam", "வணக்கம்"];
-      const endNotes = ["thank you", "thanks", "ok", "okay", "bye", "goodbye", "nandri", "நன்றி"];
-
-      if (greetings.some(greet => userLower === greet || userLower.startsWith(greet + " ") || userLower.endsWith(" " + greet))) {
-        setTimeout(() => {
-          setMessages(prev => prev.filter(msg => !msg.isTyping));
-          const botMessage = {
-            id: Date.now() + 2,
-            content: "Hello! How can I help you with agriculture today?",
-            sender: 'bot',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          setMessages(prev => [...prev, botMessage]);
-          setIsLoading(false);
-        }, 1000);
-        return;
-      }
-
-      if (endNotes.some(end => userLower === end || userLower.startsWith(end + " ") || userLower.endsWith(" " + end))) {
-        setTimeout(() => {
-          setMessages(prev => prev.filter(msg => !msg.isTyping));
-          const botMessage = {
-            id: Date.now() + 2,
-            content: "You're welcome! If you have more agriculture questions, feel free to ask. Have a great day!",
-            sender: 'bot',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          setMessages(prev => [...prev, botMessage]);
-          setIsLoading(false);
-        }, 1000);
-        return;
-      }
-
-      // Call Gemini API
-      const systemPrompt = "You are an expert agriculture assistant for Tamil Nadu. First, determine if the user's question is about agriculture (including farming, crops, livestock, agri-business, weather, soil, etc.). If it is, answer with a short, crisp, expert-like response. If it is NOT about agriculture, politely reply: 'Sorry, I can only answer agriculture-related questions.'";
-      const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              { parts: [{ text: systemPrompt + "\nUser: " + userMessageContent }] }
-            ]
-          }),
-        }
-      );
-
-      const data = await response.json();
-      const botResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I couldn't get a valid response.";
-
-      // Remove typing indicator and add bot response
-      setMessages(prev => prev.filter(msg => !msg.isTyping));
-      const botMessage = {
-        id: Date.now() + 2,
-        content: botResponse,
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // Prepare request data
+      const requestData = {
+        sessionId: SESSION_ID,
+        content: userMessageContent,
+        language: currentLanguage
       };
-      setMessages(prev => [...prev, botMessage]);
 
+      // Handle image analysis
+      if (imageToAnalyze) {
+        setIsProcessingImage(true);
+        setMessages(prev => prev.map(msg =>
+          msg.isTyping ? { ...msg, content: 'Analyzing image...' } : msg
+        ));
+        const base64Data = await convertImageToBase64(imageToAnalyze);
+        requestData.imageData = base64Data;
+        setMessages(prev => prev.map(msg =>
+          msg.isTyping ? { ...msg, content: 'Processing with AI...' } : msg
+        ));
+        try {
+          const isTamil = currentLanguage === 'ta' || (currentLanguage === 'auto' && /[\u0B80-\u0BFF]/.test(userMessageContent));
+          const responseLanguage = isTamil ? 'Tamil' : 'English';
+          const imagePrompt = `You are an expert agricultural consultant specializing in Tamil Nadu farming. 
+Analyze this crop image and provide detailed, practical advice.
+
+User Query: ${userMessageContent}
+
+IMPORTANT: Please respond in ${responseLanguage} language only.
+
+Please provide:
+1. *Crop Identification*: What crop is this?
+2. *Health Assessment*: Overall condition of the plant/crop
+3. *Issues Detected*: Any diseases, pests, nutrient deficiencies, or problems
+4. *Specific Diagnosis*: Detailed identification of any issues
+5. *Treatment Recommendations*: Specific solutions with product names if possible
+6. *Prevention Tips*: How to prevent similar issues
+7. *Tamil Nadu Context*: Region-specific advice considering local conditions
+8. *Next Steps*: Immediate actions the farmer should take
+
+Make your response practical, actionable, and suitable for Tamil Nadu farmers.
+If you detect any serious issues, prioritize those in your response.
+
+${isTamil ? 'தமிழில் பதிலளிக்கவும். விவசாயிகளுக்கு பயனுள்ள விவரங்களை தமிழில் வழங்கவும்.' : 'Please respond in English with detailed agricultural advice.'}`;
+          const botResponse = await callGeminiAPI(imagePrompt, base64Data);
+          setMessages(prev => prev.filter(msg => !msg.isTyping));
+          const botMessage = {
+            id: Date.now() + 2,
+            content: botResponse,
+            sender: 'bot',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, botMessage]);
+        } catch (error) {
+          setMessages(prev => prev.filter(msg => !msg.isTyping));
+          const errorMessage = {
+            id: Date.now() + 2,
+            content: 'Sorry, I encountered an error analyzing your image. Please try again or check your internet connection.',
+            sender: 'bot',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+        setIsProcessingImage(false);
+      } else {
+        // Process text message with Gemini API
+        try {
+          const isTamil = currentLanguage === 'ta' || (currentLanguage === 'auto' && /[\u0B80-\u0BFF]/.test(userMessageContent));
+          const responseLanguage = isTamil ? 'Tamil' : 'English';
+          const textPrompt = `You are an expert agricultural consultant for Tamil Nadu farmers. 
+User Query: ${userMessageContent}
+
+IMPORTANT: Please respond in ${responseLanguage} language only.
+
+Please provide helpful, practical advice about agriculture, farming, crops, diseases, weather, market prices, government schemes, or any other farming-related topics. 
+
+Focus on:
+- Tamil Nadu specific context and conditions
+- Practical, actionable advice
+- Local farming practices
+- Current agricultural trends
+- Government schemes and subsidies
+- Market information
+- Weather-based recommendations
+
+Make your response informative, helpful, and suitable for Tamil Nadu farmers.
+
+${isTamil ? 'தமிழில் பதிலளிக்கவும். விவசாயிகளுக்கு பயனுள்ள விவரங்களை தமிழில் வழங்கவும்.' : 'Please respond in English with detailed agricultural advice.'}`;
+          const botResponse = await callGeminiAPI(textPrompt);
+          setMessages(prev => prev.filter(msg => !msg.isTyping));
+          const botMessage = {
+            id: Date.now() + 2,
+            content: botResponse,
+            sender: 'bot',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, botMessage]);
+        } catch (error) {
+          setMessages(prev => prev.filter(msg => !msg.isTyping));
+          const botMessage = {
+            id: Date.now() + 2,
+            content: 'Sorry, there was an error processing your request. Please try again.',
+            sender: 'bot',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, botMessage]);
+        }
+      }
     } catch (error) {
-      console.error('Error:', error);
       setMessages(prev => prev.filter(msg => !msg.isTyping));
       const errorMessage = {
         id: Date.now() + 2,
-        content: 'Sorry, there was an error connecting to the service.',
+        content: 'Sorry, there was an error processing your request. Please try again.',
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setIsProcessingImage(false);
     }
+  };
+
+  // Helper function to convert image to base64
+  const convertImageToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const base64Data = e.target.result.split(',')[1];
+          resolve(base64Data);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleImageUpload = (event) => {
@@ -226,33 +419,18 @@ How can I assist you today?`,
       alert('Speech recognition not supported in this browser.');
       return;
     }
-
     const recognition = new window.webkitSpeechRecognition();
     recognitionRef.current = recognition;
-
     recognition.lang = currentLanguage === 'ta' ? 'ta-IN' : 'en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-    };
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInputValue(transcript);
-    };
-
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onresult = (event) => setInputValue(event.results[0][0].transcript);
     recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
       alert('Error during speech recognition: ' + event.error);
       setIsRecording(false);
     };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
+    recognition.onend = () => setIsRecording(false);
     recognition.start();
   };
 
@@ -262,194 +440,10 @@ How can I assist you today?`,
     }
   };
 
-  const speakText = async (text, messageId) => {
-    try {
-      // If currently speaking this message, stop it
-      if (isSpeaking && currentSpeakingId === messageId) {
-        stopCurrentSpeech();
-        return;
-      }
-
-      // If speaking another message, stop it first
-      if (isSpeaking) {
-        stopCurrentSpeech();
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      // Clean text - remove markdown and HTML
-      const cleanText = text
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/<[^>]*>/g, '')
-        .replace(/&[^;]+;/g, ' ')
-        .trim();
-
-      if (!cleanText) {
-        console.error('No text to speak after cleaning');
-        return;
-      }
-
-      // Detect Tamil text
-      const tamilRegex = /[\u0B80-\u0BFF]/;
-      const hasTamilChars = tamilRegex.test(cleanText);
-      const isTamil = hasTamilChars || currentLanguage === 'ta';
-      const lang = isTamil ? 'ta-IN' : 'en-US';
-
-      console.log('Text to speak:', cleanText);
-      console.log('Language detected:', lang);
-
-      setIsSpeaking(true);
-      setCurrentSpeakingId(messageId);
-
-      // Use Azure TTS
-      const response = await fetch(`${API_BASE_URL}/tts`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg'
-        },
-        body: JSON.stringify({ 
-          text: cleanText, 
-          language: lang 
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Azure TTS API failed with status: ${response.status}`);
-      }
-
-      const audioBlob = await response.blob();
-      if (audioBlob.size === 0) {
-        throw new Error('Received empty audio blob');
-      }
-
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      setCurrentAudio(audio);
-
-      audio.onended = () => {
-        cleanupAudio(audioUrl);
-      };
-
-      audio.onerror = (error) => {
-        console.error('Audio playback failed:', error);
-        cleanupAudio(audioUrl);
-      };
-
-      audio.oncanplaythrough = () => {
-        console.log('Audio ready to play');
-      };
-
-      await audio.play();
-      console.log('Azure TTS audio playing successfully');
-
-    } catch (error) {
-      console.error('Error in text-to-speech:', error);
-      alert('Text-to-speech failed. Please try again.');
-      resetSpeechState();
-    }
-  };
-
-  const stopCurrentSpeech = () => {
-    // Stop audio playback
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setCurrentAudio(null);
-    }
-
-    // Stop speech synthesis
-    speechSynthesis.cancel();
-    resetSpeechState();
-  };
-
-  const cleanupAudio = (audioUrl) => {
-    try {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.src = '';
-        setCurrentAudio(null);
-      }
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-    } catch (error) {
-      console.error('Error during audio cleanup:', error);
-    }
-    resetSpeechState();
-  };
-
-  const resetSpeechState = () => {
-    setIsSpeaking(false);
-    setCurrentSpeakingId(null);
-  };
-
   const clearChat = () => {
     if (window.confirm('Are you sure you want to clear the chat history?')) {
       setMessages([]);
       addWelcomeMessage();
-    }
-  };
-
-  const getQuickAdvice = async (category) => {
-    setIsLoading(true);
-    const typingMessage = {
-      id: Date.now(),
-      content: 'Getting advice...',
-      sender: 'bot',
-      isTyping: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, typingMessage]);
-
-    try {
-      const advicePrompts = {
-        weather: "Provide current weather-based farming advice for Tamil Nadu",
-        crops: "Give general crop cultivation tips for Tamil Nadu farmers",
-        pests: "Provide common pest management advice for Tamil Nadu crops",
-        schemes: "List important government schemes for Tamil Nadu farmers"
-      };
-
-      const prompt = advicePrompts[category] || "Give general farming advice";
-      const systemPrompt = "You are an expert agriculture assistant for Tamil Nadu. Provide short, practical advice.";
-      const apiKey = "AIzaSyDThNYvkIr1X0cwjMKtkIO5tXRsxxVAAN4";
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              { parts: [{ text: systemPrompt + "\nUser: " + prompt }] }
-            ]
-          }),
-        }
-      );
-
-      const data = await response.json();
-      const botResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I couldn't get advice right now.";
-
-      setMessages(prev => prev.filter(msg => !msg.isTyping));
-      const botMessage = {
-        id: Date.now() + 1,
-        content: botResponse,
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, botMessage]);
-
-    } catch (error) {
-      console.error('Error getting advice:', error);
-      setMessages(prev => prev.filter(msg => !msg.isTyping));
-      const errorMessage = {
-        id: Date.now() + 1,
-        content: 'Sorry, there was an error getting advice.',
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -503,9 +497,9 @@ How can I assist you today?`,
             <div className="message-content">
               {message.image && (
                 <div className="message-image">
-                  <img 
-                    src={URL.createObjectURL(message.image)} 
-                    alt="Uploaded" 
+                  <img
+                    src={URL.createObjectURL(message.image)}
+                    alt="Uploaded"
                     className="uploaded-image"
                   />
                 </div>
@@ -532,12 +526,12 @@ How can I assist you today?`,
                         .replace(/▶️ \*\*Next Steps\*\*/gi, '▶️ <strong>Next Steps</strong>')
                     }} />
                     {message.sender === 'bot' && (
-                      <button 
-                        className={`speak-btn ${isSpeaking && currentSpeakingId === message.id ? 'speaking' : ''}`}
-                        onClick={() => speakText(message.content, message.id)}
-                        title={isSpeaking && currentSpeakingId === message.id ? "Stop Speaking" : "Speak"}
+                      <button
+                        className="speak-btn"
+                        onClick={() => speakText(message.content)}
+                        title="Speak"
                       >
-                        <i className={`fas fa-${isSpeaking && currentSpeakingId === message.id ? 'stop' : 'volume-up'}`}></i>
+                        <i className="fas fa-volume-up"></i>
                       </button>
                     )}
                   </>
@@ -555,6 +549,12 @@ How can I assist you today?`,
           <div className="selected-image">
             <img src={URL.createObjectURL(selectedImage)} alt="Selected" />
             <button onClick={removeImage} className="remove-image">×</button>
+            {isProcessingImage && (
+              <div className="image-processing-indicator">
+                <div className="processing-spinner"></div>
+                <span>Processing image...</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -566,7 +566,7 @@ How can I assist you today?`,
             onChange={handleImageUpload}
             style={{ display: 'none' }}
           />
-          <button 
+          <button
             onClick={() => fileInputRef.current?.click()}
             className="upload-btn"
             title="Upload Image"
@@ -574,7 +574,7 @@ How can I assist you today?`,
             <i className="fas fa-camera"></i>
           </button>
 
-          <button 
+          <button
             onClick={isRecording ? stopVoiceRecognition : startVoiceRecognition}
             className={`voice-btn ${isRecording ? 'recording' : ''}`}
             title="Voice Input"
@@ -591,9 +591,9 @@ How can I assist you today?`,
             className="message-input"
           />
 
-          <button 
+          <button
             onClick={handleSendMessage}
-            disabled={(!inputValue.trim() && !selectedImage) || isLoading}
+            disabled={(!inputValue.trim() && !selectedImage) || isLoading || isProcessingImage}
             className="send-btn"
           >
             <i className="fas fa-paper-plane"></i>
