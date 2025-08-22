@@ -31,6 +31,7 @@ const translations = {
       moderate: 'Moderate',
       mild: 'Mild'
     },
+    severityInfo: 'Severity is based on disease type and impact: Severe (high-damage diseases), Moderate (medium-impact diseases), Mild (low-impact or unknown diseases)',
     recentReportsTitle: 'Recent Reports',
     loadMoreBtn: 'Load More Reports',
     loadingMore: 'Loading...',
@@ -63,6 +64,7 @@ const translations = {
       moderate: 'மிதமானது',
       mild: 'மென்மையானது'
     },
+    severityInfo: 'கடுமை நோய் வகை மற்றும் தாக்கத்தின் அடிப்படையில்: கடுமையானது (அதிக சேதம் விளைவிக்கும் நோய்கள்), மிதமானது (நடுத்தர தாக்க நோய்கள்), மென்மையானது (குறைந்த தாக்க அல்லது அறியப்படாத நோய்கள்)',
     recentReportsTitle: 'சமீபத்திய அறிக்கைகள்',
     loadMoreBtn: 'மேலும் அறிக்கைகளை ஏற்று',
     loadingMore: 'ஏற்றுகிறது...',
@@ -286,14 +288,14 @@ const DiseaseMap = () => {
     // Apply crop filter
     if (filters.cropName) {
       filtered = filtered.filter(report => 
-        report.cropName.toLowerCase().includes(filters.cropName.toLowerCase())
+        report.cropName && report.cropName.toLowerCase().includes(filters.cropName.toLowerCase())
       );
     }
 
     // Apply disease filter
     if (filters.diseaseName) {
       filtered = filtered.filter(report => 
-        report.diseaseName.toLowerCase().includes(filters.diseaseName.toLowerCase())
+        report.diseaseName && report.diseaseName.toLowerCase().includes(filters.diseaseName.toLowerCase())
       );
     }
 
@@ -307,7 +309,7 @@ const DiseaseMap = () => {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - parseInt(filters.timeRange));
       filtered = filtered.filter(report => 
-        new Date(report.dateReported) >= cutoffDate
+        report.dateReported && new Date(report.dateReported) >= cutoffDate
       );
     }
 
@@ -517,6 +519,16 @@ const DiseaseMap = () => {
               <div className="stat mild">
                 {translations[currentLang].severityStats.mild}: {filteredReports.filter(r => r.severity === 'mild').length}
               </div>
+            </div>
+            {/* Debug information */}
+            <div className="debug-info" style={{ fontSize: '12px', color: '#666', marginTop: '10px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '5px' }}>
+              <p><strong>Debug Info:</strong></p>
+              <p>Unique severities found: {[...new Set(filteredReports.map(r => r.severity))].join(', ') || 'None'}</p>
+              <p>Unique diseases: {[...new Set(filteredReports.map(r => r.diseaseName))].join(', ') || 'None'}</p>
+              <p>Date range: {filteredReports.length > 0 ? 
+                `${new Date(Math.min(...filteredReports.map(r => new Date(r.dateReported)))).toLocaleDateString()} to ${new Date(Math.max(...filteredReports.map(r => new Date(r.dateReported)))).toLocaleDateString()}` : 
+                'No reports'}</p>
+              <p><em>{translations[currentLang].severityInfo}</em></p>
             </div>
           </div>
         </div>

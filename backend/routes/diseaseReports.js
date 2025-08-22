@@ -38,24 +38,47 @@ async function translateText(text, toLang = 'ta', fromLang = 'en') {
   }
 }
 
-// Helper: compute dynamic severity based on nearby density in recent days
-async function computeDynamicSeverity({ diseaseName, latitude, longitude, days = 14, radiusKm = 50 }) {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const earthRadiusKm = 6378.1;
-  const radiusInRadians = radiusKm / earthRadiusKm;
+// Helper: compute severity based on disease type and its known impact
+function computeDiseaseSeverity(diseaseName, cropName) {
+  const diseaseNameLower = diseaseName.toLowerCase();
+  const cropNameLower = cropName.toLowerCase();
 
-  const count = await DiseaseReport.countDocuments({
-    diseaseName: new RegExp(`^${diseaseName}$`, 'i'),
-    dateReported: { $gte: since },
-    location: {
-      $geoWithin: {
-        $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], radiusInRadians]
-      }
+  // High-impact diseases that cause severe damage
+  const severeDiseases = [
+    'bacterial blight', 'bacterial wilt', 'fusarium wilt', 'verticillium wilt',
+    'late blight', 'early blight', 'anthracnose', 'root rot', 'stem rot',
+    'leaf curl virus', 'mosaic virus', 'yellow vein virus', 'ring spot virus',
+    'powdery mildew', 'downy mildew', 'rust', 'smut', 'blast', 'brown spot',
+    'bacterial leaf streak', 'bacterial leaf blight', 'rice tungro virus',
+    'citrus greening', 'citrus canker', 'banana bunchy top virus',
+    'potato virus y', 'tobacco mosaic virus', 'cucumber mosaic virus'
+  ];
+
+  // Medium-impact diseases
+  const moderateDiseases = [
+    'leaf spot', 'leaf blight', 'leaf scorch', 'leaf curl', 'leaf yellowing',
+    'fruit rot', 'fruit spot', 'flower blight', 'bud rot', 'crown rot',
+    'collar rot', 'foot rot', 'black rot', 'gray mold', 'sclerotinia',
+    'alternaria leaf spot', 'cercospora leaf spot', 'septoria leaf spot',
+    'bacterial spot', 'bacterial speck', 'fire blight', 'crown gall',
+    'clubroot', 'damping off', 'seedling blight'
+  ];
+
+  // Check for severe diseases
+  for (const disease of severeDiseases) {
+    if (diseaseNameLower.includes(disease) || disease.includes(diseaseNameLower)) {
+      return 'severe';
     }
-  });
+  }
 
-  if (count >= 10) return 'severe';
-  if (count >= 4) return 'moderate';
+  // Check for moderate diseases
+  for (const disease of moderateDiseases) {
+    if (diseaseNameLower.includes(disease) || disease.includes(diseaseNameLower)) {
+      return 'moderate';
+    }
+  }
+
+  // Default to mild for unknown or low-impact diseases
   return 'mild';
 }
 
@@ -72,11 +95,7 @@ router.post('/', async (req, res) => {
     // Determine severity (auto if not provided)
     let finalSeverity = severity;
     if (!finalSeverity || finalSeverity === 'auto') {
-      finalSeverity = await computeDynamicSeverity({
-        diseaseName,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude)
-      });
+      finalSeverity = computeDiseaseSeverity(diseaseName, cropName);
     }
 
     // Translate crop name and disease name to Tamil
@@ -182,6 +201,34 @@ router.post('/migrate', async (req, res) => {
   } catch (error) {
     console.error('Migration error:', error);
     res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
+// POST /api/diseaseReports/update-severities - Update existing reports with new severity classification
+router.post('/update-severities', async (req, res) => {
+  try {
+    const reports = await DiseaseReport.find({});
+    let updatedCount = 0;
+
+    for (const report of reports) {
+      const newSeverity = computeDiseaseSeverity(report.diseaseName, report.cropName);
+      
+      if (report.severity !== newSeverity) {
+        report.severity = newSeverity;
+        await report.save();
+        updatedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Updated severity for ${updatedCount} reports`,
+      updatedCount
+    });
+
+  } catch (error) {
+    console.error('Error updating severities:', error);
+    res.status(500).json({ error: 'Failed to update severities' });
   }
 });
 

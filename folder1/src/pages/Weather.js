@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import './Weather.css';
+import { useAuth } from '../context/AuthContext';
 
 const WEATHER_API_KEY = process.env.REACT_APP_WEATHER_API_KEY;
 const BACKUP_KEY = process.env.REACT_APP_WEATHER_BACKUP_KEY;
@@ -76,6 +77,7 @@ function WeatherPage() {
   const [crisis, setCrisis] = useState([]);
   const [measures, setMeasures] = useState([]);
   const [useBackupKey, setUseBackupKey] = useState(false);
+  const { enableNotifications } = useAuth();
 
   useEffect(() => {
     // Load Chennai weather immediately
@@ -490,8 +492,27 @@ function WeatherPage() {
     <div className="weather-page">
       {/* Page Header */}
       <div className="page-header">
-        <h1>{t('weatherDetails')}</h1>
-        <p>{t('weatherDetailsDesc')}</p>
+        <div className="header-content">
+          <div>
+            <h1>🌤️ {t('weatherDetails')}</h1>
+            <p>{t('weatherDetailsDesc')}</p>
+          </div>
+          <div>
+            <button
+              className="enable-alerts-btn"
+              onClick={async () => {
+                const res = await enableNotifications();
+                if (res?.ok) {
+                  alert('Weather alerts enabled!');
+                } else {
+                  alert('Failed to enable alerts: ' + (res?.reason || 'unknown'));
+                }
+              }}
+            >
+              🔔 Enable Weather Alerts
+            </button>
+          </div>
+        </div>
         
         {/* Language Toggle */}
         <div style={{ marginTop: '1rem' }}>

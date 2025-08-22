@@ -32,6 +32,30 @@
   opacity: 0.9;
 }
 
+.page-header .header-content {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+}
+
+.enable-alerts-btn {
+	background: #ff7043;
+	color: #fff;
+	border: none;
+	padding: 0.7rem 1.2rem;
+	border-radius: 24px;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+	transition: transform 0.15s ease, background 0.2s ease;
+	white-space: nowrap;
+}
+
+.enable-alerts-btn:hover {
+	background: #f4511e;
+	transform: translateY(-1px);
+}
+
 .weather-container {
   max-width: 900px;
   margin: 0 auto;
@@ -848,6 +872,11 @@
   .page-header p {
     font-size: 1rem;
   }
+
+  .page-header .header-content {
+		flex-direction: column;
+		align-items: flex-start;
+	}
 
   .weather-container {
     padding: 0 15px 3rem;
