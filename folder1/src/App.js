@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { LanguageProvider } from './LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import AgriChatbot from './components/AgriChatbot';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PWAUpdateNotification from './components/PWAUpdateNotification';
+import capacitorService from './services/CapacitorService';
 import Home from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -24,6 +27,29 @@ console.log('YoutubeRefs imported:', YoutubeRefs ? 'Yes' : 'No');
 
 function App() {
   console.log('App component rendering');
+
+  useEffect(() => {
+    // Initialize Capacitor service
+    const initializeCapacitor = async () => {
+      try {
+        const deviceInfo = await capacitorService.getDeviceInfo();
+        console.log('Device Info:', deviceInfo);
+        
+        const networkStatus = await capacitorService.getNetworkStatus();
+        console.log('Network Status:', networkStatus);
+        
+        // Add network listener
+        capacitorService.addNetworkListener((status) => {
+          console.log('Network status changed:', status);
+        });
+        
+      } catch (error) {
+        console.error('Error initializing Capacitor:', error);
+      }
+    };
+
+    initializeCapacitor();
+  }, []);
 
   return (
     <LanguageProvider>
@@ -60,6 +86,8 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
             </Routes>
+            <PWAInstallPrompt />
+            <PWAUpdateNotification />
           </div>
         </Router>
       </AuthProvider>
