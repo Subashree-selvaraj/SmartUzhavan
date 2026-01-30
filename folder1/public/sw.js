@@ -1,6 +1,6 @@
-const CACHE_NAME = 'agri-connect-v2';
+const CACHE_NAME = 'agri-connect-v3';
 
-// Only cache files that 100% exist
+// Only attempt to cache files that MAY exist
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -9,18 +9,23 @@ const PRECACHE_URLS = [
 ];
 
 /* ===============================
-   INSTALL – Pre-cache safe assets
+   INSTALL – Safe per-file caching
 ================================ */
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async cache => {
-      try {
-        console.log('[SW] Opened cache');
-        await cache.addAll(PRECACHE_URLS);
-        self.skipWaiting();
-      } catch (err) {
-        console.error('[SW] Precache failed:', err);
+      console.log('[SW] Cache opened');
+
+      for (const url of PRECACHE_URLS) {
+        try {
+          await cache.add(url);
+          console.log('[SW] Cached:', url);
+        } catch (err) {
+          console.warn('[SW] Skipped (not found):', url);
+        }
       }
+
+      self.skipWaiting();
     })
   );
 });
@@ -32,10 +37,10 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map(cache => {
-          if (cache !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cache);
-            return caches.delete(cache);
+        cacheNames.map(name => {
+          if (name !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
           }
         })
       );
@@ -47,12 +52,12 @@ self.addEventListener('activate', event => {
    FETCH – Network first, cache fallback
 ================================ */
 self.addEventListener('fetch', event => {
-  const { request } = event;
+  const request = event.request;
 
   // Ignore non-GET requests
   if (request.method !== 'GET') return;
 
-  // Ignore Firebase / API / OAuth calls
+  // Ignore Firebase / OAuth / API calls
   if (
     request.url.includes('firebase') ||
     request.url.includes('googleapis') ||
@@ -65,7 +70,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(request)
       .then(response => {
-        // Cache only valid same-origin responses
+        // Cache only same-origin successful responses
         if (
           response &&
           response.status === 200 &&
@@ -83,7 +88,7 @@ self.addEventListener('fetch', event => {
         return caches.match(request).then(cached => {
           if (cached) return cached;
 
-          // Fallback for navigation (page refresh)
+          // Page refresh offline support
           if (request.mode === 'navigate') {
             return caches.match('/');
           }
@@ -118,7 +123,7 @@ self.addEventListener('push', event => {
     event.waitUntil(
       self.registration.showNotification(title, options)
     );
-  } catch (err) {
+  } catch (e) {
     event.waitUntil(
       self.registration.showNotification('AgriConnect Alert', {
         body: 'You have a new message',
