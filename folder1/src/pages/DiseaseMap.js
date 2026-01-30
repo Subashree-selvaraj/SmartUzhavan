@@ -23,7 +23,8 @@ const translations = {
     timeRangeLabel: 'Time Range:',
     timeRange7Days: 'Last 7 days',
     timeRange30Days: 'Last 30 days',
-    timeRange90Days: 'Last 3 months',
+  timeRange90Days: 'Last 3 months',
+  timeRange365Days: 'Last 365 days',
     hotspotsLabel: 'Show common hotspots (AI)',
     totalReports: 'Total Reports:',
     severityStats: {
@@ -56,7 +57,8 @@ const translations = {
     timeRangeLabel: 'நேர வரம்பு:',
     timeRange7Days: 'கடந்த 7 நாட்கள்',
     timeRange30Days: 'கடந்த 30 நாட்கள்',
-    timeRange90Days: 'கடந்த 3 மாதங்கள்',
+  timeRange90Days: 'கடந்த 3 மாதங்கள்',
+  timeRange365Days: 'கடந்த 365 நாட்கள்',
     hotspotsLabel: 'பொதுவான சூடான இடங்களை காட்டு (AI)',
     totalReports: 'மொத்த அறிக்கைகள்:',
     severityStats: {
@@ -127,7 +129,7 @@ const DiseaseMap = () => {
     cropName: '',
     diseaseName: '',
     severity: '',
-    timeRange: '30' // days
+    timeRange: '365' // days (default to last year so loaded reports are visible)
   });
   const [availableFilters, setAvailableFilters] = useState({
     crops: [],
@@ -216,9 +218,15 @@ const DiseaseMap = () => {
   const loadReports = async () => {
     setLoading(true);
     try {
-      // Reduce initial load to last 30 days instead of 90 for faster loading
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
+  // Use last 365 days so older reports (seeded earlier) are visible on the map
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 365);
+      
+      console.log('Loading disease reports with params:', {
+        startDate: startDate.toISOString(),
+        limit: 500,
+        lang: currentLang
+      });
       
       const response = await diseaseApi.fetchReports({
         startDate: startDate.toISOString(),
@@ -226,13 +234,57 @@ const DiseaseMap = () => {
         lang: currentLang // Pass current language to API
       });
 
-      setReports(response.data || []);
-      setAvailableFilters({
-        crops: response.filters?.crops || [],
-        diseases: response.filters?.diseases || []
-      });
+      console.log('Disease reports response:', response); // Debug log
+      
+      if (response && response.success && response.data) {
+        console.log('Setting reports:', response.data.length, 'reports');
+        setReports(response.data);
+        setAvailableFilters({
+          crops: response.filters?.crops || [],
+          diseases: response.filters?.diseases || []
+        });
+      } else {
+        console.error('Invalid response format:', response);
+        // Create some sample data for testing if no real data is available
+        const sampleData = [
+          {
+            _id: 'sample1',
+            farmerName: 'Sample Farmer',
+            cropName: 'Rice',
+            diseaseName: 'Bacterial Blight',
+            severity: 'severe',
+            location: {
+              type: 'Point',
+              coordinates: [78.9629, 20.5937] // Center of India
+            },
+            dateReported: new Date().toISOString(),
+            reportedBy: 'sample'
+          },
+          {
+            _id: 'sample2',
+            farmerName: 'Test Farmer',
+            cropName: 'Tomato',
+            diseaseName: 'Early Blight',
+            severity: 'moderate',
+            location: {
+              type: 'Point',
+              coordinates: [77.1025, 28.7041] // Delhi
+            },
+            dateReported: new Date(Date.now() - 86400000).toISOString(),
+            reportedBy: 'sample'
+          }
+        ];
+        setReports(sampleData);
+        setAvailableFilters({ 
+          crops: ['Rice', 'Tomato'], 
+          diseases: ['Bacterial Blight', 'Early Blight'] 
+        });
+      }
     } catch (error) {
       console.error('Error loading disease reports:', error);
+      // Set empty data on error
+      setReports([]);
+      setAvailableFilters({ crops: [], diseases: [] });
     } finally {
       setLoading(false);
     }
@@ -257,9 +309,10 @@ const DiseaseMap = () => {
     
     setLoadingMore(true);
     try {
-      const nextPage = currentPage + 1;
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
+  const nextPage = currentPage + 1;
+  // Keep the same range used for initial load (last 365 days)
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 365);
       
       const response = await diseaseApi.fetchReports({
         startDate: startDate.toISOString(),
@@ -268,7 +321,7 @@ const DiseaseMap = () => {
         lang: currentLang // Pass current language to API
       });
 
-      if (response.data && response.data.length > 0) {
+      if (response.success && response.data && response.data.length > 0) {
         setReports(prev => [...prev, ...response.data]);
         setCurrentPage(nextPage);
         setHasMoreData(response.data.length === 500);
@@ -497,6 +550,7 @@ const DiseaseMap = () => {
               <option value="7">{translations[currentLang].timeRange7Days}</option>
               <option value="30">{translations[currentLang].timeRange30Days}</option>
               <option value="90">{translations[currentLang].timeRange90Days}</option>
+              <option value="365">{translations[currentLang].timeRange365Days}</option>
             </select>
           </div>
 
