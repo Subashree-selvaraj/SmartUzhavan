@@ -2,7 +2,7 @@
 
 > **Empowering farmers through AI, real-time insights, and native language support**
 
-![Banner](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square) ![Tech Stack](https://img.shields.io/badge/Stack-MERN-blue?style=flat-square) ![Language](https://img.shields.io/badge/Languages-Tamil%20%26%20English-orange?style=flat-square)
+![Banner](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square) ![Tech Stack](https://img.shields.io/badge/Stack-MERN-blue?style=flat-square) ![Language](https://img.shields.io/badge/Language-Tamil%2BEnglish-orange?style=flat-square)
 
 ---
 
@@ -207,9 +207,16 @@ SmartUzhavan/
 
 ## 🌐 Demo & Links
 
-- 🔗 **Demo:** [Your deployment link](https://drive.google.com/file/d/1DWGt9nYvDrVse1_p1UOZoppydW8cCjvQ/view?usp=sharing)
-- 📦 **GitHub:** [SmartUzhavan](https://github.com/Subashree-selvaraj/SmartUzhavan)
+### 🔗 Live Resources
+- 🎬 **Demo Video:** [View on Google Drive](https://drive.google.com/file/d/1DWGt9nYvDrVse1_p1UOZoppydW8cCjvQ/view?usp=sharing)
+- 🌐 **Live Demo:** [Visit SmartUzhavan](https://smartuzhavan.netlify.app)
+- 📦 **GitHub Repository:** [SmartUzhavan](https://github.com/Subashree-selvaraj/SmartUzhavan)
+- 📖 **Documentation:** [Wiki & Guides](https://github.com/Subashree-selvaraj/SmartUzhavan/wiki)
 
+### 📚 Useful Resources
+- 🚀 **Getting Started Guide:** [Setup Instructions](SETUP.md)
+- 🐛 **Report Issues:** [GitHub Issues](https://github.com/Subashree-selvaraj/SmartUzhavan/issues)
+- 💬 **Discussions:** [Community Forum](https://github.com/Subashree-selvaraj/SmartUzhavan/discussions)
 
 ---
 
@@ -253,4 +260,4 @@ This project is open source and available under the MIT License.
 
 ---
 
-*Last Updated: June 2026* | [View Changelog](#)
+*Last Updated: June 2026* | [View Changelog](CHANGELOG.md)
