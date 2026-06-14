@@ -207,9 +207,9 @@ SmartUzhavan/
 
 ## 🌐 Demo & Links
 
-- 🔗 **Live Demo:** [Your deployment link]
+- 🔗 **Demo:** [Your deployment link](https://drive.google.com/file/d/1DWGt9nYvDrVse1_p1UOZoppydW8cCjvQ/view?usp=sharing)
 - 📦 **GitHub:** [SmartUzhavan](https://github.com/Subashree-selvaraj/SmartUzhavan)
-- 📱 **Try PWA:** Works offline on mobile!
+
 
 ---
 
@@ -243,8 +243,7 @@ This project is open source and available under the MIT License.
 ## 👩‍💻 About
 
 **Created by:** Subashree S  
-**Mission:** Bridging the gap between cutting-edge agricultural technology and grassroots farming communities  
-**Built with:** ❤️ for Tamil farmers
+
 
 ---
 
